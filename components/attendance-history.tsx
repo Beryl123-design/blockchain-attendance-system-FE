@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { getAttendance } from "@/services/blockchainService"
 
 interface AttendanceRecord {
   id: string
@@ -28,17 +29,12 @@ export function AttendanceHistory() {
   const [filter, setFilter] = useState("all")
 
   useEffect(() => {
-    // Load attendance records from localStorage
-    const storedRecords = JSON.parse(localStorage.getItem("attendanceHistory") || "[]")
-    setAttendanceRecords(storedRecords)
+    const fetchAttendance = async () => {
+      const records = await getAttendance("EMPLOYEE_ID"); // Replace with dynamic employee ID
+      setAttendanceRecords(records);
+    };
 
-    // Set up an interval to refresh the data every 30 seconds
-    const intervalId = setInterval(() => {
-      const refreshedRecords = JSON.parse(localStorage.getItem("attendanceHistory") || "[]")
-      setAttendanceRecords(refreshedRecords)
-    }, 30000)
-
-    return () => clearInterval(intervalId)
+    fetchAttendance();
   }, [])
 
   const formatDuration = (seconds: number): string => {
@@ -123,8 +119,8 @@ export function AttendanceHistory() {
             <CardTitle className="text-navy">My Attendance</CardTitle>
             <CardDescription>Track your attendance history</CardDescription>
           </div>
-          <Select value={filter} onValueChange={setFilter} className="mt-2 sm:mt-0 sm:w-[150px]">
-            <SelectTrigger>
+          <Select value={filter} onValueChange={setFilter}>
+            <SelectTrigger className="mt-2 sm:mt-0 sm:w-[150px]">
               <SelectValue placeholder="Filter" />
             </SelectTrigger>
             <SelectContent>

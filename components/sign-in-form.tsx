@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -9,24 +8,49 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Loader2 } from "lucide-react"
+import { api } from '@/services/api'
+import { toast } from '@/components/ui/use-toast'
 
 export default function SignInForm() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [role, setRole] = useState("employee")
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    // In a real app, we would authenticate with a backend service
-    // and store the user's role and token in localStorage or a secure cookie
-
-    // For demo purposes, we'll just store the role in localStorage
-    localStorage.setItem("userRole", role)
-
-    // Redirect to the appropriate dashboard
-    router.push("/dashboard")
+    setIsLoading(true)
+    
+    try {
+      // Login with email and password
+      const userData = await api.login({ 
+        email, 
+        password,
+       // Include role in login request
+      })
+      
+      // Store user data in localStorage
+      localStorage.setItem('user', JSON.stringify(userData))
+      localStorage.setItem('userRole', role)
+      
+      toast({
+        title: "Success",
+        description: "Successfully signed in",
+      })
+      
+      // Redirect to dashboard based on role
+      router.push('/dashboard')
+    } catch (error) {
+      toast({
+        title: "Authentication Error",
+        description: error instanceof Error ? error.message : "Failed to sign in",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -43,10 +67,15 @@ export default function SignInForm() {
                 <TabsTrigger
                   value="employee"
                   className="data-[state=active]:bg-steel-blue data-[state=active]:text-white"
+                  disabled={isLoading}
                 >
                   Employee
                 </TabsTrigger>
-                <TabsTrigger value="admin" className="data-[state=active]:bg-steel-blue data-[state=active]:text-white">
+                <TabsTrigger 
+                  value="admin" 
+                  className="data-[state=active]:bg-steel-blue data-[state=active]:text-white"
+                  disabled={isLoading}
+                >
                   Admin
                 </TabsTrigger>
               </TabsList>
@@ -62,6 +91,7 @@ export default function SignInForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isLoading}
                 className="border-steel-blue/50 focus-visible:ring-steel-blue"
               />
             </div>
@@ -75,10 +105,18 @@ export default function SignInForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={isLoading}
                 className="border-steel-blue/50 focus-visible:ring-steel-blue"
               />
             </div>
-            <Button type="submit" className="w-full bg-steel-blue hover:bg-steel-blue/90">
+            <Button 
+              type="submit" 
+              className="w-full bg-steel-blue hover:bg-steel-blue/90"
+              disabled={isLoading}
+            >
+              {isLoading && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
               Sign In
             </Button>
           </div>

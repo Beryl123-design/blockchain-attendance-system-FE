@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { recordAttendance } from "@/services/blockchainService"
 
 // Mock data for attendance issues
 const initialIssues = [
@@ -83,8 +84,11 @@ export function IssuesList() {
     setIsDialogOpen(true)
   }
 
-  const handleStatusChange = (status: string) => {
+  const handleStatusChange = async (status: string) => {
     if (!selectedIssue) return
+
+    // Record the status change on the blockchain
+    await recordAttendance(selectedIssue.employeeId, selectedIssue.dateReported, status)
 
     setIssues((prev) => prev.map((issue) => (issue.id === selectedIssue.id ? { ...issue, status, notes } : issue)))
 

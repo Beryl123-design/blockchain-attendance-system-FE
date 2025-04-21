@@ -1,8 +1,44 @@
-import express from "express";
+import express, { Request, Response, Router } from "express";
 import { PrismaClient } from "@prisma/client";
 import Web3 from "web3";
 import dotenv from "dotenv";
 import cors from 'cors';
+
+// Type definitions
+interface AttendanceRecord {
+  id: number;
+  date: Date;
+  checkIn: Date;
+  checkOut?: Date;
+  status: string;
+  totalWorkTime?: number;
+  totalBreakTime?: number;
+  overtime?: number;
+  location?: string;
+  blockchainHash?: string;
+  userId: number;
+  verified: boolean;
+}
+
+interface BlockchainAttendanceRecord {
+  status: string;
+  timestamp: number;
+  location?: string;
+}
+
+interface LeaveRequestBody {
+  userId: number;
+  startDate: string;
+  endDate: string;
+  leaveType: string;
+  reason: string;
+}
+
+interface AttendanceTrackBody {
+  userId: number;
+  status: string;
+  location?: string;
+}
 
 dotenv.config();
 
@@ -20,7 +56,10 @@ const contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
 app.use(express.json());
 app.use(cors());
 
-app.post("/register", async (req, res) => {
+// Initialize Express Router instead of direct app routes
+const router = Router();
+
+router.post("/register", async (req, res) => {
   const { email, password, role, ethereumAddress } = req.body;
   try {
     const user = await prisma.user.create({
@@ -32,7 +71,7 @@ app.post("/register", async (req, res) => {
   }
 });
 
-app.post("/login", async (req, res) => {
+router.post("/login", async (req, res) => {
   const { email, password } = req.body;
   const user = await prisma.user.findUnique({ where: { email } });
   if (user && user.password === password) {
@@ -42,7 +81,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.post("/attendance", async (req, res) => {
+router.post("/attendance", async (req, res) => {
   const { userId, date, status } = req.body;
   const attendance = await prisma.attendance.create({
     data: { userId, date: new Date(date), status },
@@ -50,27 +89,32 @@ app.post("/attendance", async (req, res) => {
   res.json(attendance);
 });
 
-app.get("/attendance/:userId", async (req, res) => {
+router.get("/attendance/:userId", async (req, res) => {
   const { userId } = req.params;
   const attendance = await prisma.attendance.findMany({ where: { userId: Number(userId) } });
   res.json(attendance);
 });
 
-app.post("/payroll", async (req, res) => {
+router.post("/payroll", async (req, res) => {
   const { userId, amount, date } = req.body;
   const payroll = await prisma.payroll.create({
-    data: { userId, amount, date: new Date(date) },
+    data: { 
+      user: { connect: { id: userId } }, 
+      amount, 
+      date: new Date(date), 
+      status: "pending" // Add a default status or appropriate value
+    },
   });
   res.json(payroll);
 });
 
-app.get("/payroll/:userId", async (req, res) => {
+router.get("/payroll/:userId", async (req, res) => {
   const { userId } = req.params;
   const payroll = await prisma.payroll.findMany({ where: { userId: Number(userId) } });
   res.json(payroll);
 });
 
-app.post("/leave-request", async (req, res) => {
+router.post("/leave-request", async (req: Request<{}, {}, LeaveRequestBody>, res: Response) => {
   const { userId, startDate, endDate, leaveType, reason } = req.body;
   try {
     // Create leave request in database
@@ -94,7 +138,7 @@ app.post("/leave-request", async (req, res) => {
       reason
     ).send({ 
       from: accounts[0],
-      gas: 500000
+      gas: '500000' // Gas value as string
     });
 
     res.json({
@@ -107,7 +151,7 @@ app.post("/leave-request", async (req, res) => {
   }
 });
 
-app.get("/leave-requests/:userId", async (req, res) => {
+router.get("/leave-requests/:userId", async (req, res) => {
   const { userId } = req.params;
   try {
     const leaves = await prisma.leaveRequest.findMany({
@@ -120,7 +164,7 @@ app.get("/leave-requests/:userId", async (req, res) => {
   }
 });
 
-app.post("/attendance/track", async (req, res) => {
+router.post("/attendance/track", async (req: Request<{}, {}, AttendanceTrackBody>, res: Response) => {
   const { userId, status, location } = req.body;
   try {
     // Create attendance record in database
@@ -138,7 +182,7 @@ app.post("/attendance/track", async (req, res) => {
     const tx = await contract.methods.markAttendance(status, location)
       .send({ 
         from: accounts[0],
-        gas: 500000 // Adjust gas as needed
+        gas: '500000' // Gas value as string
       });
 
     res.json({
@@ -151,38 +195,51 @@ app.post("/attendance/track", async (req, res) => {
   }
 });
 
-// Add endpoint to verify attendance on blockchain
-app.get("/attendance/verify/:userId/:date", async (req, res) => {
-  const { userId, date } = req.params;
-  try {
-    // Get attendance from database
-    const attendance = await prisma.attendance.findFirst({
-      where: {
-        userId: Number(userId),
-        date: new Date(date)
-      }
-    });
+// // Update the attendance verification route
+// router.get("/attendance/verify/:userId/:date", async (
+//   req: Request<{ userId: string; date: string }>,
+//   res: Response
+// ) => {
+//   const { userId, date } = req.params;
+//   try {
+//     const attendance = await prisma.attendance.findFirst({
+//       where: {
+//         userId: Number(userId),
+//         date: new Date(date)
+//       }
+//     });
 
-    if (!attendance) {
-      return res.status(404).json({ error: "Attendance record not found" });
-    }
+//     if (!attendance) {
+//       return res.status(404).json({ error: "Attendance record not found" });
+//     }
 
-    // Verify on blockchain
-    const blockchainRecord = await contract.methods.getAttendanceRecord(
-      attendance.userId,
-      Math.floor(new Date(date).getTime() / 1000)
-    ).call();
+//     const blockchainRecord = await contract.methods.getAttendanceRecord(
+//       attendance.userId,
+//       Math.floor(new Date(date).getTime() / 1000)
+//     ).call() as BlockchainAttendanceRecord;
 
-    res.json({
-      databaseRecord: attendance,
-      blockchainRecord,
-      verified: attendance.status === blockchainRecord.status
-    });
-  } catch (error) {
-    console.error('Attendance verification error:', error);
-    res.status(400).json({ error: "Failed to verify attendance" });
-  }
-});
+//     // Update verification status in database
+//     const updatedAttendance = await prisma.attendance.update({
+//       where: { id: attendance.id },
+//       data: { 
+//         verified: attendance.status === blockchainRecord.status,
+//         blockchainHash: blockchainRecord.status // Store the blockchain status
+//       }
+//     });
+
+//     res.json({
+//       attendance: updatedAttendance,
+//       blockchainRecord,
+//       verified: updatedAttendance.verified
+//     });
+//   } catch (error) {
+//     console.error('Attendance verification error:', error);
+//     res.status(400).json({ error: "Failed to verify attendance" });
+//   }
+// });
+
+// Use router middleware
+app.use("/api", router);
 
 const tryPort = (port: number): Promise<number> => {
   return new Promise((resolve, reject) => {
@@ -206,4 +263,4 @@ tryPort(Number(process.env.PORT) || 3000)
   })
   .catch(err => {
     console.error('Failed to start server:', err);
-  }); 
+  });
