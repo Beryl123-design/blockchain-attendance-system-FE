@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/use-toast"
+import { api } from '@/services/api'
 
 interface TimeTrackingProps {
   employeeRole: "executive" | "department_head" | "employee"
@@ -142,39 +143,31 @@ export function TimeTracking({ employeeRole }: TimeTrackingProps) {
     }
   }
 
-  const handleCheckIn = () => {
-    const now = new Date()
-    setStatus("in")
-    setCheckInTime(now)
-    setElapsedTime(0)
-    setTotalBreakTime(0)
-
-    // Generate a unique ID for this attendance record
-    const recordId = Date.now().toString()
-    setCurrentRecordId(recordId)
-
-    // Create new attendance record
-    const attendanceHistory = JSON.parse(localStorage.getItem("attendanceHistory") || "[]")
-    attendanceHistory.push({
-      id: recordId,
-      employeeId: "EMP001", // This would come from user context in a real app
-      employeeName: "John Doe", // This would come from user context in a real app
-      date: now.toISOString().split("T")[0],
-      checkIn: now.toISOString(),
-      checkOut: null,
-      currentStatus: "in",
-      totalBreakTime: 0,
-      overtime: 0,
-      status: "In Progress",
-    })
-
-    localStorage.setItem("attendanceHistory", JSON.stringify(attendanceHistory))
-
-    toast({
-      title: "Checked In",
-      description: `You have successfully checked in at ${formatDateTime(now)}.`,
-    })
-  }
+  const handleCheckIn = async () => {
+    try {
+      const userId = JSON.parse(localStorage.getItem('user') || '{}').id;
+      const attendance = await api.createAttendance({
+        userId,
+        date: new Date().toISOString(),
+        status: 'in',
+      });
+      
+      setStatus('in');
+      setCheckInTime(new Date());
+      setCurrentRecordId(attendance.id);
+      
+      toast({
+        title: "Check-in Successful",
+        description: "Your attendance has been recorded",
+      });
+    } catch (error) {
+      toast({
+        title: "Check-in Failed",
+        description: "Failed to record attendance",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleCheckOut = () => {
     const now = new Date()

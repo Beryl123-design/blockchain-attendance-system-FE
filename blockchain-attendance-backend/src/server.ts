@@ -259,7 +259,7 @@ const tryPort = (port: number): Promise<number> => {
 
 tryPort(Number(process.env.PORT) || 3000)
   .then(port => {
-    console.log(Server is running on port ${port});
+    console.log(`Server is running on port ${port}`);
   })
   .catch(err => {
     console.error('Failed to start server:', err);
