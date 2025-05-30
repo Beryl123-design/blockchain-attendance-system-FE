@@ -103,3 +103,37 @@
   color: white;
 }
 
+/* Mobile-specific styles */
+@media (max-width: 640px) {
+  .card {
+    padding: 1rem;
+  }
+
+  h1.text-2xl {
+    font-size: 1.5rem;
+  }
+
+  .table-container {
+    overflow-x: auto;
+  }
+
+  /* Improve touch targets for mobile */
+  button,
+  [role="button"],
+  .button,
+  select,
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Adjust spacing for mobile */
+  .p-4 {
+    padding: 0.75rem;
+  }
+
+  .gap-4 {
+    gap: 0.75rem;
+  }
+}

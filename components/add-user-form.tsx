@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -21,7 +21,34 @@ export interface User {
   jobTitle: string
   status: "Active" | "Inactive"
   dateAdded: string
+  password?: string
 }
+
+// ECG-specific departments
+const ecgDepartments = [
+  { value: "engineering", label: "Engineering" },
+  { value: "customer_service", label: "Customer Service" },
+  { value: "finance", label: "Finance" },
+  { value: "hr", label: "Human Resources" },
+  { value: "operations", label: "Operations" },
+  { value: "technical", label: "Technical Services" },
+  { value: "metering", label: "Metering" },
+  { value: "distribution", label: "Distribution" },
+  { value: "commercial", label: "Commercial" },
+  { value: "it", label: "Information Technology" },
+  { value: "legal", label: "Legal" },
+  { value: "procurement", label: "Procurement" },
+]
+
+// ECG-specific roles
+const ecgRoles = [
+  { value: "employee", label: "Employee" },
+  { value: "supervisor", label: "Supervisor" },
+  { value: "manager", label: "Manager" },
+  { value: "director", label: "Director" },
+  { value: "hr", label: "HR Personnel" },
+  { value: "admin", label: "System Administrator" },
+]
 
 export function AddUserForm() {
   const [formData, setFormData] = useState({
@@ -32,6 +59,14 @@ export function AddUserForm() {
     userType: "",
     password: "",
   })
+
+  const [userCount, setUserCount] = useState(0)
+
+  // Load user count from localStorage on component mount
+  useEffect(() => {
+    const existingUsers = JSON.parse(localStorage.getItem("users") || "[]")
+    setUserCount(existingUsers.length)
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -57,10 +92,22 @@ export function AddUserForm() {
       jobTitle: formData.jobTitle,
       status: "Active",
       dateAdded: new Date().toISOString().split("T")[0],
+      password: formData.password, // In a real app, this would be hashed
     }
 
     // Get existing users from localStorage
     const existingUsers = JSON.parse(localStorage.getItem("users") || "[]")
+
+    // Check if user with this email already exists
+    const userExists = existingUsers.some((user: User) => user.email === formData.email)
+
+    if (userExists) {
+      toast({
+        title: "Error",
+        description: `A user with email ${formData.email} already exists.`,
+      })
+      return
+    }
 
     // Add new user to the list
     const updatedUsers = [...existingUsers, newUser]
@@ -68,10 +115,13 @@ export function AddUserForm() {
     // Save to localStorage
     localStorage.setItem("users", JSON.stringify(updatedUsers))
 
+    // Update user count
+    setUserCount(updatedUsers.length)
+
     // Show success message
     toast({
       title: "User Added",
-      description: `${formData.name} has been added successfully.`,
+      description: `${formData.name} has been added successfully. They can now log in with their email and password.`,
     })
 
     // Reset form
@@ -89,7 +139,7 @@ export function AddUserForm() {
     <Card>
       <CardHeader>
         <CardTitle>Add New User</CardTitle>
-        <CardDescription>Add a new employee to the system.</CardDescription>
+        <CardDescription>Add a new employee to the system. Total users: {userCount}</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
@@ -111,7 +161,7 @@ export function AddUserForm() {
                 id="email"
                 name="email"
                 type="email"
-                placeholder="john.doe@example.com"
+                placeholder="john.doe@ecggh.com"
                 value={formData.email}
                 onChange={handleChange}
                 required
@@ -124,11 +174,11 @@ export function AddUserForm() {
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="engineering">Engineering</SelectItem>
-                  <SelectItem value="marketing">Marketing</SelectItem>
-                  <SelectItem value="finance">Finance</SelectItem>
-                  <SelectItem value="hr">Human Resources</SelectItem>
-                  <SelectItem value="operations">Operations</SelectItem>
+                  {ecgDepartments.map((dept) => (
+                    <SelectItem key={dept.value} value={dept.value}>
+                      {dept.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -137,7 +187,7 @@ export function AddUserForm() {
               <Input
                 id="jobTitle"
                 name="jobTitle"
-                placeholder="Software Developer"
+                placeholder="Electrical Engineer"
                 value={formData.jobTitle}
                 onChange={handleChange}
                 required
@@ -155,14 +205,17 @@ export function AddUserForm() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="user-type">User Type</Label>
+              <Label htmlFor="user-type">User Role</Label>
               <Select value={formData.userType} onValueChange={(value) => handleSelectChange("userType", value)}>
                 <SelectTrigger id="user-type">
-                  <SelectValue placeholder="Select user type" />
+                  <SelectValue placeholder="Select user role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="employee">Employee</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  {ecgRoles.map((role) => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -176,4 +229,3 @@ export function AddUserForm() {
     </Card>
   )
 }
-

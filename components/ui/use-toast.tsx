@@ -13,4 +13,3 @@ export function toast({ title, description, duration = 3000 }: ToastProps) {
   // Dispatch the event
   window.dispatchEvent(event)
 }
-

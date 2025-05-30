@@ -45,7 +45,7 @@
     "embla-carousel-react": "8.5.1",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
-    "next": "15.1.0",
+    "next": "^15.3.1",
     "next-themes": "^0.4.4",
     "react": "^18.2.0",
     "react-day-picker": "latest",
@@ -57,9 +57,8 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.6",
-    "zod": "^3.24.1",
-    "@types/react": "18.2.0",
-    "@types/react-dom": "18.2.0"
+    "web3": "^4.16.0",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22",
@@ -70,6 +69,7 @@
     "eslint": "^8.40.0",
     "next": "^15.2.4",
     "postcss": "^8",
+    "prisma": "^4.16.0",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"
   }

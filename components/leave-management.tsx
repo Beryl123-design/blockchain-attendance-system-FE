@@ -247,4 +247,3 @@ export function LeaveManagement({ userRole, department }: LeaveManagementProps) 
     </Card>
   )
 }
-

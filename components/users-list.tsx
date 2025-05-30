@@ -20,6 +20,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { User } from "./add-user-form"
 
 // Initial mock data for users
@@ -76,11 +86,39 @@ const initialUsers = [
   },
 ] as User[]
 
+// ECG-specific departments
+const ecgDepartments = [
+  { value: "engineering", label: "Engineering" },
+  { value: "customer_service", label: "Customer Service" },
+  { value: "finance", label: "Finance" },
+  { value: "hr", label: "Human Resources" },
+  { value: "operations", label: "Operations" },
+  { value: "technical", label: "Technical Services" },
+  { value: "metering", label: "Metering" },
+  { value: "distribution", label: "Distribution" },
+  { value: "commercial", label: "Commercial" },
+  { value: "it", label: "Information Technology" },
+  { value: "legal", label: "Legal" },
+  { value: "procurement", label: "Procurement" },
+]
+
+// ECG-specific roles
+const ecgRoles = [
+  { value: "employee", label: "Employee" },
+  { value: "supervisor", label: "Supervisor" },
+  { value: "manager", label: "Manager" },
+  { value: "director", label: "Director" },
+  { value: "hr", label: "HR Personnel" },
+  { value: "admin", label: "System Administrator" },
+]
+
 export function UsersList() {
   const [searchTerm, setSearchTerm] = useState("")
   const [users, setUsers] = useState<User[]>(initialUsers)
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
+  const [userToEdit, setUserToEdit] = useState<User | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [sortConfig, setSortConfig] = useState<{
     key: keyof User | null
     direction: "ascending" | "descending"
@@ -148,9 +186,26 @@ export function UsersList() {
   const handleDeleteUser = () => {
     if (!userToDelete) return
 
+    // Add confirmation dialog
+    if (!window.confirm(`Are you sure you want to delete ${userToDelete.name}? This action cannot be undone.`)) {
+      setUserToDelete(null)
+      setIsDeleteDialogOpen(false)
+      return
+    }
+
     const updatedUsers = users.filter((user) => user.id !== userToDelete.id)
     setUsers(updatedUsers)
     localStorage.setItem("users", JSON.stringify(updatedUsers))
+
+    // Record activity
+    const activities = JSON.parse(localStorage.getItem("recentActivities") || "[]")
+    activities.unshift({
+      id: Date.now().toString(),
+      type: "User Management",
+      description: `User ${userToDelete.name} has been deleted from the system.`,
+      timestamp: new Date().toISOString(),
+    })
+    localStorage.setItem("recentActivities", JSON.stringify(activities))
 
     toast({
       title: "User Deleted",
@@ -159,6 +214,42 @@ export function UsersList() {
 
     setUserToDelete(null)
     setIsDeleteDialogOpen(false)
+  }
+
+  // Handle edit form changes
+  const handleEditChange = (field: keyof User, value: string) => {
+    if (!userToEdit) return
+    setUserToEdit({
+      ...userToEdit,
+      [field]: value,
+    })
+  }
+
+  // Handle user edit submission
+  const handleEditSubmit = () => {
+    if (!userToEdit) return
+
+    const updatedUsers = users.map((user) => (user.id === userToEdit.id ? userToEdit : user))
+    setUsers(updatedUsers)
+    localStorage.setItem("users", JSON.stringify(updatedUsers))
+
+    // Record activity
+    const activities = JSON.parse(localStorage.getItem("recentActivities") || "[]")
+    activities.unshift({
+      id: Date.now().toString(),
+      type: "User Management",
+      description: `User ${userToEdit.name}'s information has been updated.`,
+      timestamp: new Date().toISOString(),
+    })
+    localStorage.setItem("recentActivities", JSON.stringify(activities))
+
+    toast({
+      title: "User Updated",
+      description: `${userToEdit.name}'s information has been updated successfully.`,
+    })
+
+    setUserToEdit(null)
+    setIsEditDialogOpen(false)
   }
 
   return (
@@ -222,7 +313,12 @@ export function UsersList() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setUserToEdit(user)
+                            setIsEditDialogOpen(true)
+                          }}
+                        >
                           <Pencil className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
@@ -275,8 +371,110 @@ export function UsersList() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Edit User Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>Make changes to the user's information. Click save when you're done.</DialogDescription>
+          </DialogHeader>
+          {userToEdit && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="name"
+                  value={userToEdit.name}
+                  onChange={(e) => handleEditChange("name", e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="email" className="text-right">
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  value={userToEdit.email}
+                  onChange={(e) => handleEditChange("email", e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="department" className="text-right">
+                  Department
+                </Label>
+                <Select value={userToEdit.department} onValueChange={(value) => handleEditChange("department", value)}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ecgDepartments.map((dept) => (
+                      <SelectItem key={dept.value} value={dept.value}>
+                        {dept.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="jobTitle" className="text-right">
+                  Job Title
+                </Label>
+                <Input
+                  id="jobTitle"
+                  value={userToEdit.jobTitle}
+                  onChange={(e) => handleEditChange("jobTitle", e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="role" className="text-right">
+                  Role
+                </Label>
+                <Select value={userToEdit.role} onValueChange={(value) => handleEditChange("role", value)}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ecgRoles.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        {role.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="status" className="text-right">
+                  Status
+                </Label>
+                <Select
+                  value={userToEdit.status}
+                  onValueChange={(value) => handleEditChange("status", value as "Active" | "Inactive")}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button type="submit" onClick={handleEditSubmit}>
+              Save changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Toaster />
     </Card>
   )
 }
-

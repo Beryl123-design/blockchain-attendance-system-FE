@@ -45,4 +45,3 @@ export const CardFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDiv
   <div className={cn("flex flex-col", className)} {...props} />
 )
 CardFooter.displayName = "CardFooter"
-

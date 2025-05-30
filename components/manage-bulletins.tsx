@@ -152,4 +152,3 @@ export function ManageBulletins() {
     </Card>
   )
 }
-

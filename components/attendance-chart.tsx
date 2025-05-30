@@ -4,9 +4,17 @@ import { useState } from "react"
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { Button } from "@/components/ui/button"
 import { format, startOfWeek, endOfWeek, subWeeks, addDays } from "date-fns"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Download } from "lucide-react"
 
 // Mock data for different weeks
 const weeklyData = {
@@ -114,19 +122,13 @@ const weeklyAttendanceDetails = {
   threeWeeksAgo: generateWeeklyAttendanceData(3),
 }
 
-//const monthlyData = [ //Removed duplicate declaration
-//  { name: "Week 1", Present: 120, Absent: 5, Leave: 3 },
-//  { name: "Week 2", Present: 118, Absent: 7, Leave: 5 },
-//  { name: "Week 3", Present: 115, Absent: 8, Leave: 7 },
-//  { name: "Week 4", Present: 122, Absent: 3, Leave: 5 },
-//]
-
 export function AttendanceChart() {
   const [selectedWeek, setSelectedWeek] = useState<null | "current" | "previous" | "twoWeeksAgo" | "threeWeeksAgo">(
     null,
   )
-  const [showAttendanceDetails, setShowAttendanceDetails] = useState(false)
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false)
+  const [detailsData, setDetailsData] = useState<any>(null)
 
   const handleWeekClick = (weekIndex: number) => {
     if (weekIndex === 3) {
@@ -141,9 +143,18 @@ export function AttendanceChart() {
   }
 
   const handleBarClick = (data) => {
-    if (data && data.activeLabel) {
+    if (data && data.activeLabel && selectedWeek) {
       setSelectedDay(data.activeLabel)
-      setShowAttendanceDetails(true)
+
+      // Prepare the data for the dialog
+      const dialogData = {
+        week: selectedWeek,
+        day: data.activeLabel,
+        attendanceData: weeklyAttendanceDetails[selectedWeek],
+      }
+
+      setDetailsData(dialogData)
+      setShowDetailsDialog(true)
     }
   }
 
@@ -157,14 +168,32 @@ export function AttendanceChart() {
   const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
   const currentWeekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 })
 
-  // Filter attendance data based on selected day
-  const filteredAttendanceData =
-    selectedWeek && selectedDay
-      ? weeklyAttendanceDetails[selectedWeek].map((employee) => ({
-          ...employee,
-          dayData: employee.attendance.find((day) => day.day === selectedDay),
-        }))
-      : []
+  // Function to export attendance data as CSV
+  const exportAttendanceData = () => {
+    if (!detailsData) return
+
+    // Create CSV header
+    let csv = "Employee ID,Name,Department,Check In,Check Out,Status\n"
+
+    // Add data rows
+    detailsData.attendanceData.forEach((employee) => {
+      const dayData = employee.attendance.find((day) => day.day === detailsData.day)
+      if (dayData) {
+        csv += `${employee.id},${employee.name},${employee.department},${dayData.checkIn},${dayData.checkOut},${dayData.status}\n`
+      }
+    })
+
+    // Create a blob and download
+    const blob = new Blob([csv], { type: "text/csv" })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.setAttribute("hidden", "")
+    a.setAttribute("href", url)
+    a.setAttribute("download", `attendance-${detailsData.day}-${getWeekLabel(detailsData.week).replace(/\s/g, "")}.csv`)
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
 
   if (selectedWeek) {
     return (
@@ -180,7 +209,6 @@ export function AttendanceChart() {
             size="sm"
             onClick={() => {
               setSelectedWeek(null)
-              setShowAttendanceDetails(false)
               setSelectedDay(null)
             }}
           >
@@ -201,54 +229,70 @@ export function AttendanceChart() {
           </BarChart>
         </ResponsiveContainer>
 
-        {showAttendanceDetails && selectedDay && (
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {selectedDay} Attendance Details ({getWeekLabel(selectedWeek)})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Check In</TableHead>
-                    <TableHead>Check Out</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAttendanceData.map((employee) => (
-                    <TableRow key={employee.id}>
-                      <TableCell className="font-medium">
-                        {employee.name}
-                        <div className="text-xs text-muted-foreground">{employee.id}</div>
-                      </TableCell>
-                      <TableCell>{employee.department}</TableCell>
-                      <TableCell>{employee.dayData?.checkIn || "-"}</TableCell>
-                      <TableCell>{employee.dayData?.checkOut || "-"}</TableCell>
-                      <TableCell>
-                        <Badge
-                          className={
-                            employee.dayData?.status === "Present"
-                              ? "bg-green-100 text-green-800"
-                              : employee.dayData?.status === "Absent"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-yellow-100 text-yellow-800"
-                          }
-                        >
-                          {employee.dayData?.status || "Unknown"}
-                        </Badge>
-                      </TableCell>
+        {/* Attendance Details Dialog */}
+        <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>{detailsData?.day} Attendance Details</DialogTitle>
+              <DialogDescription>{detailsData && getWeekLabel(detailsData.week)}</DialogDescription>
+            </DialogHeader>
+
+            <div className="max-h-[60vh] overflow-y-auto">
+              {detailsData && (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Check In</TableHead>
+                      <TableHead>Check Out</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
+                  </TableHeader>
+                  <TableBody>
+                    {detailsData.attendanceData.map((employee) => {
+                      const dayData = employee.attendance.find((day) => day.day === detailsData.day)
+                      return (
+                        <TableRow key={employee.id}>
+                          <TableCell className="font-medium">
+                            {employee.name}
+                            <div className="text-xs text-muted-foreground">{employee.id}</div>
+                          </TableCell>
+                          <TableCell>{employee.department}</TableCell>
+                          <TableCell>{dayData?.checkIn || "-"}</TableCell>
+                          <TableCell>{dayData?.checkOut || "-"}</TableCell>
+                          <TableCell>
+                            <Badge
+                              className={
+                                dayData?.status === "Present"
+                                  ? "bg-green-100 text-green-800"
+                                  : dayData?.status === "Absent"
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-yellow-100 text-yellow-800"
+                              }
+                            >
+                              {dayData?.status || "Unknown"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDetailsDialog(false)} className="mr-2">
+                Close
+              </Button>
+              <Button onClick={exportAttendanceData} className="bg-steel-blue hover:bg-steel-blue/90">
+                <Download className="mr-2 h-4 w-4" />
+                Export Report
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     )
   }
@@ -271,4 +315,3 @@ export function AttendanceChart() {
     </ResponsiveContainer>
   )
 }
-

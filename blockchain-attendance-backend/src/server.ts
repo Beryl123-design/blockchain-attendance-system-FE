@@ -94,8 +94,8 @@ app.post("/leave-request", async (req, res) => {
       reason
     ).send({ 
       from: accounts[0],
-      gas: 500000
-    });
+      gas: "500000"
+          });
 
     res.json({
       leave,
@@ -138,7 +138,7 @@ app.post("/attendance/track", async (req, res) => {
     const tx = await contract.methods.markAttendance(status, location)
       .send({ 
         from: accounts[0],
-        gas: 500000 // Adjust gas as needed
+        gas: "500000" // Adjust gas as needed
       });
 
     res.json({
@@ -159,28 +159,30 @@ app.get("/attendance/verify/:userId/:date", async (req, res) => {
     const attendance = await prisma.attendance.findFirst({
       where: {
         userId: Number(userId),
-        date: new Date(date)
-      }
+        date: new Date(date),
+      },
     });
 
     if (!attendance) {
-      return res.status(404).json({ error: "Attendance record not found" });
+      return res.status(404).json({ error: 'Attendance record not found' });
     }
 
     // Verify on blockchain
-    const blockchainRecord = await contract.methods.getAttendanceRecord(
-      attendance.userId,
-      Math.floor(new Date(date).getTime() / 1000)
-    ).call();
+    const blockchainRecord: { status: string } = await contract.methods
+      .getAttendanceRecord(
+        attendance.userId,
+        Math.floor(new Date(date).getTime() / 1000)
+      )
+      .call();
 
     res.json({
       databaseRecord: attendance,
       blockchainRecord,
-      verified: attendance.status === blockchainRecord.status
+      verified: attendance.status === blockchainRecord.status,
     });
   } catch (error) {
     console.error('Attendance verification error:', error);
-    res.status(400).json({ error: "Failed to verify attendance" });
+    res.status(400).json({ error: 'Failed to verify attendance' });
   }
 });
 
@@ -206,4 +208,4 @@ tryPort(Number(process.env.PORT) || 3000)
   })
   .catch(err => {
     console.error('Failed to start server:', err);
-  }); 
+  });

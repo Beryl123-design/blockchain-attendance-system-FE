@@ -88,6 +88,16 @@ export function IssuesList() {
 
     setIssues((prev) => prev.map((issue) => (issue.id === selectedIssue.id ? { ...issue, status, notes } : issue)))
 
+    // Record activity
+    const activities = JSON.parse(localStorage.getItem("recentActivities") || "[]")
+    activities.unshift({
+      id: Date.now().toString(),
+      type: "Issue Management",
+      description: `Issue from ${selectedIssue.employeeName} marked as ${status}.`,
+      timestamp: new Date().toISOString(),
+    })
+    localStorage.setItem("recentActivities", JSON.stringify(activities))
+
     setIsDialogOpen(false)
   }
 
@@ -195,69 +205,76 @@ export function IssuesList() {
 
         {selectedIssue && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent className="sm:max-w-[525px]">
+            <DialogContent className="sm:max-w-[600px] w-[95vw] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Issue Details</DialogTitle>
                 <DialogDescription>Reported on {selectedIssue.dateReported}</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
+                <div className="grid grid-cols-4 items-center gap-2">
                   <span className="text-sm font-medium">Employee:</span>
-                  <span className="col-span-3">
+                  <span className="col-span-3 break-words">
                     {selectedIssue.employeeName} ({selectedIssue.employeeId})
                   </span>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
+                <div className="grid grid-cols-4 items-center gap-2">
                   <span className="text-sm font-medium">Department:</span>
-                  <span className="col-span-3">{selectedIssue.department}</span>
+                  <span className="col-span-3 break-words">{selectedIssue.department}</span>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
+                <div className="grid grid-cols-4 items-center gap-2">
                   <span className="text-sm font-medium">Issue Type:</span>
-                  <span className="col-span-3">{selectedIssue.issueType}</span>
+                  <span className="col-span-3 break-words">{selectedIssue.issueType}</span>
                 </div>
-                <div className="grid grid-cols-4 items-start gap-4">
+                <div className="grid grid-cols-4 items-start gap-2">
                   <span className="text-sm font-medium">Description:</span>
-                  <span className="col-span-3">{selectedIssue.description}</span>
+                  <span className="col-span-3 break-words">{selectedIssue.description}</span>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
+                <div className="grid grid-cols-4 items-center gap-2">
                   <span className="text-sm font-medium">Current Status:</span>
                   <span className="col-span-3">{getStatusBadge(selectedIssue.status)}</span>
                 </div>
-                <div className="grid grid-cols-4 items-start gap-4">
+                <div className="grid grid-cols-4 items-start gap-2">
                   <span className="text-sm font-medium">Notes:</span>
-                  <Textarea
-                    className="col-span-3"
-                    placeholder="Add notes about this issue"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                  />
+                  <div className="col-span-3 w-full">
+                    <Textarea
+                      className="w-full resize-none"
+                      placeholder="Add notes about this issue"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
                 </div>
               </div>
-              <DialogFooter>
-                <div className="flex w-full justify-between">
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => handleStatusChange("Pending")}
-                      className="border-yellow-500 text-yellow-700 hover:bg-yellow-50"
-                    >
-                      <AlertCircle className="mr-2 h-4 w-4" />
-                      Mark as Pending
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleStatusChange("In Progress")}
-                      className="border-blue-500 text-blue-700 hover:bg-blue-50"
-                    >
-                      <Clock className="mr-2 h-4 w-4" />
-                      Mark as In Progress
-                    </Button>
-                  </div>
-                  <Button onClick={() => handleStatusChange("Solved")} className="bg-green-600 hover:bg-green-700">
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Mark as Solved
+              <DialogFooter className="flex-col sm:flex-row gap-2 mt-2">
+                <div className="flex flex-wrap gap-2 justify-start w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleStatusChange("Pending")}
+                    className="border-yellow-500 text-yellow-700 hover:bg-yellow-50"
+                    size="sm"
+                  >
+                    <AlertCircle className="mr-2 h-4 w-4" />
+                    Mark as Pending
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleStatusChange("In Progress")}
+                    className="border-blue-500 text-blue-700 hover:bg-blue-50"
+                    size="sm"
+                  >
+                    <Clock className="mr-2 h-4 w-4" />
+                    Mark as In Progress
                   </Button>
                 </div>
+                <Button
+                  onClick={() => handleStatusChange("Solved")}
+                  className="bg-green-600 hover:bg-green-700"
+                  size="sm"
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Mark as Solved
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -266,4 +283,3 @@ export function IssuesList() {
     </Card>
   )
 }
-

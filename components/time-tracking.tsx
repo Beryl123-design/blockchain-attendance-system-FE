@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/use-toast"
+import { getAttendanceRecords, recordAttendance } from "@/lib/api-client"
 
 interface TimeTrackingProps {
   employeeRole: "executive" | "department_head" | "employee"
@@ -33,6 +34,13 @@ export function TimeTracking({ employeeRole }: TimeTrackingProps) {
   const [showBreakWarning, setShowBreakWarning] = useState(false)
   const [currentRecordId, setCurrentRecordId] = useState<string | null>(null)
 
+  // Get user info from localStorage
+  const userEmail = localStorage.getItem("userEmail") || ""
+  const userName = localStorage.getItem("userName") || ""
+  const userDepartment = localStorage.getItem("userDepartment") || ""
+  const userJobTitle = localStorage.getItem("userJobTitle") || ""
+  const userId = localStorage.getItem("userId") || ""
+
   // Grace period in minutes based on role
   const gracePeriodsInMinutes = {
     executive: 30,
@@ -42,27 +50,52 @@ export function TimeTracking({ employeeRole }: TimeTrackingProps) {
 
   // Check if there's an ongoing session when component mounts
   useEffect(() => {
-    const attendanceHistory = JSON.parse(localStorage.getItem("attendanceHistory") || "[]")
-    const ongoingSession = attendanceHistory.find((record) => record.status === "In Progress")
+    const fetchAttendanceData = async () => {
+      try {
+        // Get today's date in YYYY-MM-DD format
+        const today = new Date().toISOString().split("T")[0]
 
-    if (ongoingSession) {
-      setCurrentRecordId(ongoingSession.id)
-      setCheckInTime(new Date(ongoingSession.checkIn))
-      setStatus(ongoingSession.currentStatus || "in")
+        // Fetch attendance records for today
+        const response = await getAttendanceRecords(userId, today)
 
-      if (ongoingSession.breakStartTime) {
-        setBreakStartTime(new Date(ongoingSession.breakStartTime))
-      }
+        if (response.records && response.records.length > 0) {
+          // Find an in-progress record
+          const ongoingRecord = response.records.find((record: any) => !record.checkOut)
 
-      if (ongoingSession.totalBreakTime) {
-        setTotalBreakTime(ongoingSession.totalBreakTime)
-      }
+          if (ongoingRecord) {
+            setCurrentRecordId(ongoingRecord.id)
+            setCheckInTime(new Date(ongoingRecord.checkIn))
+            setStatus(
+              ongoingRecord.status === "break" ? "break" : ongoingRecord.status === "overtime" ? "overtime" : "in",
+            )
 
-      if (ongoingSession.overtimeStartTime) {
-        setOvertimeStartTime(new Date(ongoingSession.overtimeStartTime))
+            if (ongoingRecord.breakStartTime) {
+              setBreakStartTime(new Date(ongoingRecord.breakStartTime))
+            }
+
+            if (ongoingRecord.totalBreakTime) {
+              setTotalBreakTime(ongoingRecord.totalBreakTime)
+            }
+
+            if (ongoingRecord.overtimeStartTime) {
+              setOvertimeStartTime(new Date(ongoingRecord.overtimeStartTime))
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching attendance data:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load attendance data. Please refresh the page.",
+          variant: "destructive",
+        })
       }
     }
-  }, [])
+
+    if (userId) {
+      fetchAttendanceData()
+    }
+  }, [userId])
 
   useEffect(() => {
     let timer: NodeJS.Timeout
@@ -74,11 +107,28 @@ export function TimeTracking({ employeeRole }: TimeTrackingProps) {
           const elapsed = Math.floor((now.getTime() - checkInTime.getTime()) / 1000)
           setElapsedTime(elapsed)
 
-          // Check for automatic overtime after 8 hours (28800 seconds)
-          if (elapsed >= 28800 && status !== "overtime") {
-            setStatus("overtime")
-            setOvertimeStartTime(new Date())
-            updateAttendanceRecord("overtime")
+          // Check for automatic overtime after 8 hours (28800 seconds) or after 5pm
+          if (status !== "overtime") {
+            // Get settings for work hours
+            const workEndTime = "17:00" // Default to 5pm
+
+            // Parse the end time
+            const [endHour, endMinute] = workEndTime.split(":").map(Number)
+
+            // Check if current time is after work end time
+            const currentHour = now.getHours()
+            const currentMinute = now.getMinutes()
+
+            if (
+              (currentHour > endHour || (currentHour === endHour && currentMinute >= endMinute)) &&
+              now.getDate() === checkInTime.getDate()
+            ) {
+              handleStartOvertime()
+            }
+            // Also keep the 8-hour check as a fallback
+            else if (elapsed >= 28800) {
+              handleStartOvertime()
+            }
           }
         }
       }, 1000)
@@ -118,146 +168,176 @@ export function TimeTracking({ employeeRole }: TimeTrackingProps) {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
   }
 
-  // Helper function to update the attendance record in localStorage
-  const updateAttendanceRecord = (newStatus: string) => {
-    const attendanceHistory = JSON.parse(localStorage.getItem("attendanceHistory") || "[]")
+  const handleCheckIn = async () => {
+    try {
+      const now = new Date()
 
-    if (currentRecordId) {
-      // Update existing record
-      const updatedHistory = attendanceHistory.map((record) => {
-        if (record.id === currentRecordId) {
-          return {
-            ...record,
-            currentStatus: newStatus,
-            breakStartTime: breakStartTime ? breakStartTime.toISOString() : null,
-            totalBreakTime,
-            overtimeStartTime: overtimeStartTime ? overtimeStartTime.toISOString() : null,
-            lastUpdated: new Date().toISOString(),
-          }
-        }
-        return record
+      // Create attendance record in the backend
+      const response = await recordAttendance({
+        userId,
+        date: now.toISOString().split("T")[0],
+        checkIn: now.toISOString(),
+        status: "in",
       })
 
-      localStorage.setItem("attendanceHistory", JSON.stringify(updatedHistory))
+      // Update local state
+      setStatus("in")
+      setCheckInTime(now)
+      setElapsedTime(0)
+      setTotalBreakTime(0)
+      setCurrentRecordId(response.record.id)
+
+      toast({
+        title: "Checked In",
+        description: `You have successfully checked in at ${formatDateTime(now)}.`,
+      })
+    } catch (error) {
+      console.error("Check-in error:", error)
+      toast({
+        title: "Check-in Failed",
+        description: "Failed to record check-in. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
-  const handleCheckIn = () => {
-    const now = new Date()
-    setStatus("in")
-    setCheckInTime(now)
-    setElapsedTime(0)
-    setTotalBreakTime(0)
+  const handleCheckOut = async () => {
+    if (!currentRecordId) return
 
-    // Generate a unique ID for this attendance record
-    const recordId = Date.now().toString()
-    setCurrentRecordId(recordId)
+    try {
+      const now = new Date()
 
-    // Create new attendance record
-    const attendanceHistory = JSON.parse(localStorage.getItem("attendanceHistory") || "[]")
-    attendanceHistory.push({
-      id: recordId,
-      employeeId: "EMP001", // This would come from user context in a real app
-      employeeName: "John Doe", // This would come from user context in a real app
-      date: now.toISOString().split("T")[0],
-      checkIn: now.toISOString(),
-      checkOut: null,
-      currentStatus: "in",
-      totalBreakTime: 0,
-      overtime: 0,
-      status: "In Progress",
-    })
-
-    localStorage.setItem("attendanceHistory", JSON.stringify(attendanceHistory))
-
-    toast({
-      title: "Checked In",
-      description: `You have successfully checked in at ${formatDateTime(now)}.`,
-    })
-  }
-
-  const handleCheckOut = () => {
-    const now = new Date()
-
-    // Update status
-    setStatus("out")
-    setCheckOutTime(now)
-    setOvertimeStartTime(null)
-
-    // Calculate overtime if applicable
-    const overtimeDuration = overtimeStartTime ? Math.floor((now.getTime() - overtimeStartTime.getTime()) / 1000) : 0
-
-    // Update localStorage
-    const attendanceHistory = JSON.parse(localStorage.getItem("attendanceHistory") || "[]")
-    const updatedHistory = attendanceHistory.map((record) => {
-      if (record.id === currentRecordId) {
-        return {
-          ...record,
-          checkOut: now.toISOString(),
-          totalBreakTime,
-          overtime: overtimeDuration,
-          currentStatus: "out",
-          status: "Completed",
-        }
+      // Calculate overtime if applicable
+      let overtimeDuration = 0
+      if (overtimeStartTime) {
+        overtimeDuration = Math.floor((now.getTime() - overtimeStartTime.getTime()) / 1000)
       }
-      return record
-    })
 
-    localStorage.setItem("attendanceHistory", JSON.stringify(updatedHistory))
-    setCurrentRecordId(null)
+      // Update attendance record in the backend
+      await recordAttendance({
+        id: currentRecordId,
+        checkOut: now.toISOString(),
+        totalBreakTime,
+        overtime: overtimeDuration,
+        status: "out",
+      })
 
-    toast({
-      title: "Checked Out",
-      description: `You have successfully checked out at ${formatDateTime(now)}.`,
-    })
-  }
+      // Update local state
+      setStatus("out")
+      setCheckOutTime(now)
+      setOvertimeStartTime(null)
+      setCurrentRecordId(null)
 
-  const handleBreakStart = () => {
-    const now = new Date()
-    setStatus("break")
-    setBreakStartTime(now)
-    setShowBreakWarning(false)
-
-    // Update the record in localStorage
-    updateAttendanceRecord("break")
-
-    toast({
-      title: "Break Started",
-      description: `Your break started at ${formatDateTime(now)}.`,
-    })
-  }
-
-  const handleBreakEnd = () => {
-    const now = new Date()
-    if (breakStartTime) {
-      const breakDuration = Math.floor((now.getTime() - breakStartTime.getTime()) / 1000)
-      setTotalBreakTime((prev) => prev + breakDuration)
+      toast({
+        title: "Checked Out",
+        description: `You have successfully checked out at ${formatDateTime(now)}.`,
+      })
+    } catch (error) {
+      console.error("Check-out error:", error)
+      toast({
+        title: "Check-out Failed",
+        description: "Failed to record check-out. Please try again.",
+        variant: "destructive",
+      })
     }
-    setStatus("in")
-    setBreakStartTime(null)
-    setShowBreakWarning(false)
-
-    // Update the record in localStorage
-    updateAttendanceRecord("in")
-
-    toast({
-      title: "Break Ended",
-      description: `Your break has ended.`,
-    })
   }
 
-  const handleStartOvertime = () => {
-    const now = new Date()
-    setStatus("overtime")
-    setOvertimeStartTime(now)
+  const handleBreakStart = async () => {
+    if (!currentRecordId) return
 
-    // Update the record in localStorage
-    updateAttendanceRecord("overtime")
+    try {
+      const now = new Date()
 
-    toast({
-      title: "Overtime Started",
-      description: `Your overtime started at ${formatDateTime(now)}.`,
-    })
+      // Update attendance record in the backend
+      await recordAttendance({
+        id: currentRecordId,
+        status: "break",
+        breakStartTime: now.toISOString(),
+      })
+
+      // Update local state
+      setStatus("break")
+      setBreakStartTime(now)
+      setShowBreakWarning(false)
+
+      toast({
+        title: "Break Started",
+        description: `Your break started at ${formatDateTime(now)}.`,
+      })
+    } catch (error) {
+      console.error("Break start error:", error)
+      toast({
+        title: "Failed to Start Break",
+        description: "Failed to record break start. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleBreakEnd = async () => {
+    if (!currentRecordId || !breakStartTime) return
+
+    try {
+      const now = new Date()
+      const breakDuration = Math.floor((now.getTime() - breakStartTime.getTime()) / 1000)
+      const newTotalBreakTime = totalBreakTime + breakDuration
+
+      // Update attendance record in the backend
+      await recordAttendance({
+        id: currentRecordId,
+        status: "in",
+        totalBreakTime: newTotalBreakTime,
+      })
+
+      // Update local state
+      setStatus("in")
+      setTotalBreakTime(newTotalBreakTime)
+      setBreakStartTime(null)
+      setShowBreakWarning(false)
+
+      toast({
+        title: "Break Ended",
+        description: `Your break has ended.`,
+      })
+    } catch (error) {
+      console.error("Break end error:", error)
+      toast({
+        title: "Failed to End Break",
+        description: "Failed to record break end. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleStartOvertime = async () => {
+    if (!currentRecordId) return
+
+    try {
+      const now = new Date()
+
+      // Update attendance record in the backend
+      await recordAttendance({
+        id: currentRecordId,
+        status: "overtime",
+        overtimeStartTime: now.toISOString(),
+      })
+
+      // Update local state
+      setStatus("overtime")
+      setOvertimeStartTime(now)
+
+      toast({
+        title: "Overtime Started",
+        description: `Your overtime started at ${formatDateTime(now)}.`,
+      })
+    } catch (error) {
+      console.error("Overtime start error:", error)
+      toast({
+        title: "Failed to Start Overtime",
+        description: "Failed to record overtime start. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   const getStatusBadge = () => {
@@ -315,7 +395,11 @@ export function TimeTracking({ employeeRole }: TimeTrackingProps) {
 
           <div className="grid grid-cols-2 gap-4">
             {status === "out" ? (
-              <Button className="col-span-2 bg-steel-blue hover:bg-steel-blue/90" onClick={handleCheckIn}>
+              <Button
+                className="col-span-2 bg-steel-blue hover:bg-steel-blue/90"
+                onClick={handleCheckIn}
+                aria-label="Check in to work"
+              >
                 <Clock className="mr-2 h-4 w-4" />
                 Check In
               </Button>
@@ -329,6 +413,7 @@ export function TimeTracking({ employeeRole }: TimeTrackingProps) {
                     "relative border-steel-blue text-steel-blue hover:bg-steel-blue/10",
                     breakTimeLeft < 0 && "border-red-500 text-red-600 hover:bg-red-50",
                   )}
+                  aria-label={status === "break" ? "Currently on break" : "Take a break"}
                 >
                   <Coffee className="mr-2 h-4 w-4" />
                   {status === "break" ? "On Break" : "Take Break"}
@@ -442,4 +527,3 @@ export function TimeTracking({ employeeRole }: TimeTrackingProps) {
     </Card>
   )
 }
-
