@@ -11,7 +11,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-light-gray">
+    <div className="flex items-center justify-center min-h-screen bg-light-gray">
       <SignInForm />
     </div>
   )

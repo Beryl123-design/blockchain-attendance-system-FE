@@ -164,10 +164,10 @@ export function UsersList() {
     const aValue = a[sortConfig.key]
     const bValue = b[sortConfig.key]
 
-    if (aValue < bValue) {
+    if (aValue !== undefined && bValue !== undefined && aValue < bValue) {
       return sortConfig.direction === "ascending" ? -1 : 1
     }
-    if (aValue > bValue) {
+    if (aValue !== undefined && bValue !== undefined && aValue > bValue) {
       return sortConfig.direction === "ascending" ? 1 : -1
     }
     return 0
@@ -267,8 +267,8 @@ export function UsersList() {
               <TableHead>
                 <div className="flex items-center">
                   Name
-                  <Button variant="ghost" size="sm" className="ml-1 h-8 p-0" onClick={() => requestSort("name")}>
-                    <ArrowUpDown className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="h-8 p-0 ml-1" onClick={() => requestSort("name")}>
+                    <ArrowUpDown className="w-4 h-4" />
                   </Button>
                 </div>
               </TableHead>
@@ -276,8 +276,8 @@ export function UsersList() {
               <TableHead>
                 <div className="flex items-center">
                   Department
-                  <Button variant="ghost" size="sm" className="ml-1 h-8 p-0" onClick={() => requestSort("department")}>
-                    <ArrowUpDown className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="h-8 p-0 ml-1" onClick={() => requestSort("department")}>
+                    <ArrowUpDown className="w-4 h-4" />
                   </Button>
                 </div>
               </TableHead>
@@ -285,8 +285,8 @@ export function UsersList() {
               <TableHead>
                 <div className="flex items-center">
                   Status
-                  <Button variant="ghost" size="sm" className="ml-1 h-8 p-0" onClick={() => requestSort("status")}>
-                    <ArrowUpDown className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="h-8 p-0 ml-1" onClick={() => requestSort("status")}>
+                    <ArrowUpDown className="w-4 h-4" />
                   </Button>
                 </div>
               </TableHead>
@@ -308,7 +308,7 @@ export function UsersList() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
+                          <MoreHorizontal className="w-4 h-4" />
                           <span className="sr-only">Open menu</span>
                         </Button>
                       </DropdownMenuTrigger>
@@ -319,7 +319,7 @@ export function UsersList() {
                             setIsEditDialogOpen(true)
                           }}
                         >
-                          <Pencil className="mr-2 h-4 w-4" />
+                          <Pencil className="w-4 h-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -329,7 +329,7 @@ export function UsersList() {
                             setIsDeleteDialogOpen(true)
                           }}
                         >
-                          <Trash className="mr-2 h-4 w-4" />
+                          <Trash className="w-4 h-4 mr-2" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -341,7 +341,7 @@ export function UsersList() {
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center">
                   <div className="flex flex-col items-center justify-center text-muted-foreground">
-                    <AlertCircle className="h-8 w-8 mb-2" />
+                    <AlertCircle className="w-8 h-8 mb-2" />
                     <p>No users found</p>
                     <p className="text-sm">Try adjusting your search terms</p>
                   </div>
@@ -380,7 +380,7 @@ export function UsersList() {
           </DialogHeader>
           {userToEdit && (
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid items-center grid-cols-4 gap-4">
                 <Label htmlFor="name" className="text-right">
                   Name
                 </Label>
@@ -391,7 +391,7 @@ export function UsersList() {
                   className="col-span-3"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid items-center grid-cols-4 gap-4">
                 <Label htmlFor="email" className="text-right">
                   Email
                 </Label>
@@ -402,7 +402,7 @@ export function UsersList() {
                   className="col-span-3"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid items-center grid-cols-4 gap-4">
                 <Label htmlFor="department" className="text-right">
                   Department
                 </Label>
@@ -419,7 +419,7 @@ export function UsersList() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid items-center grid-cols-4 gap-4">
                 <Label htmlFor="jobTitle" className="text-right">
                   Job Title
                 </Label>
@@ -430,7 +430,7 @@ export function UsersList() {
                   className="col-span-3"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid items-center grid-cols-4 gap-4">
                 <Label htmlFor="role" className="text-right">
                   Role
                 </Label>
@@ -447,7 +447,7 @@ export function UsersList() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid items-center grid-cols-4 gap-4">
                 <Label htmlFor="status" className="text-right">
                   Status
                 </Label>

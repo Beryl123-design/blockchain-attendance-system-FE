@@ -5,13 +5,14 @@ import { withAuth } from "@/lib/api-middleware"
 import { Permission } from "@/lib/rbac"
 
 // Mock user database
-const USERS = [
-  { id: "1", email: "admin@example.com", role: "admin", name: "Admin User", department: "Management" },
-  { id: "2", email: "employee@example.com", role: "employee", name: "Employee User", department: "Engineering" },
-  { id: "3", email: "hr@example.com", role: "hr", name: "HR User", department: "Human Resources" },
-  { id: "4", email: "supervisor@example.com", role: "supervisor", name: "Supervisor User", department: "Engineering" },
-  { id: "5", email: "john.doe@example.com", role: "employee", name: "John Doe", department: "Marketing" },
-  { id: "6", email: "jane.smith@example.com", role: "employee", name: "Jane Smith", department: "Finance" },
+export const USERS = [
+  { id: "1", email: "admin@example.com", password: "admin123", role: "admin", name: "Admin User", department: "Management" },
+  { id: "2", email: "employee@example.com", password: "employee123", role: "employee", name: "Employee User", department: "Engineering" },
+  { id: "3", email: "hr@example.com", password: "hr123", role: "hr", name: "HR User", department: "Human Resources" },
+  { id: "4", email: "supervisor@example.com", password: "supervisor123", role: "supervisor", name: "Supervisor User", department: "Engineering" },
+  { id: "5", email: "john.doe@example.com", password: "john123", role: "employee", name: "John Doe", department: "Marketing" },
+  { id: "6", email: "jane.smith@example.com", password: "jane123", role: "employee", name: "Jane Smith", department: "Finance" },
+  { id: "7", email: "beryldanso@gmail.com", password: "beryl123", role: "admin", name: "Admin User", department: "Management" },
 ]
 
 async function getUsers(req: NextRequest) {
@@ -29,7 +30,7 @@ async function getUsers(req: NextRequest) {
     }
 
     // Return users without passwords
-    const safeUsers = USERS.map(({ password, ...user }) => user)
+    const safeUsers = USERS.map((user) => user)
     return NextResponse.json({ users: safeUsers })
   } catch (error) {
     console.error("Error fetching users:", error)
@@ -59,6 +60,7 @@ async function createUser(req: NextRequest) {
       name,
       role,
       department: department || "General",
+      password: "defaultPassword", // In a real app, use a secure password hashing method
     }
 
     // Add to mock database

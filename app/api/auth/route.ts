@@ -4,11 +4,11 @@ import { setAuthCookie } from "@/lib/auth-cookies"
 import { validateCsrfToken } from "@/lib/csrf"
 import { logAuditEvent } from "@/lib/audit-logger"
 import { isRateLimited } from "@/lib/rate-limiter"
-import { USERS } from "@/lib/users" // Declare the USERS variable
+import { USERS } from "../users/route";
 
 export async function POST(request: NextRequest) {
   // Get IP address for rate limiting
-  const ipAddress = request.ip || request.headers.get("x-forwarded-for") || "unknown"
+  const ipAddress = request.headers.get("x-forwarded-for") || "unknown"
 
   // Check rate limit: 5 attempts per 15 minutes
   if (isRateLimited(`login:${ipAddress}`, 5, 15 * 60 * 1000)) {
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     // Log failed attempt due to CSRF
     await logAuditEvent({
       eventType: "auth:login:csrf_failure",
-      ipAddress: request.ip || request.headers.get("x-forwarded-for") || undefined,
+      ipAddress: request.headers.get("x-forwarded-for") || undefined,
       userAgent: request.headers.get("user-agent") || undefined,
     })
 
@@ -39,13 +39,21 @@ export async function POST(request: NextRequest) {
     const { email, password } = body
 
     // Find user
-    const user = USERS.find((u) => u.email === email)
+    interface User {
+      id: string;
+      email: string;
+      password: string;
+      role: string;
+      name: string;
+    }
+
+    const user: User | undefined = USERS.find((u: User) => u.email === email);
 
     // Log login attempt
     await logAuditEvent({
       eventType: "auth:login:attempt",
       userEmail: email,
-      ipAddress: request.ip || request.headers.get("x-forwarded-for") || undefined,
+      ipAddress: request.headers.get("x-forwarded-for") || undefined,
       userAgent: request.headers.get("user-agent") || undefined,
     })
 
@@ -54,7 +62,7 @@ export async function POST(request: NextRequest) {
       await logAuditEvent({
         eventType: "auth:login:failure",
         userEmail: email,
-        ipAddress: request.ip || request.headers.get("x-forwarded-for") || undefined,
+        ipAddress: request.headers.get("x-forwarded-for") || undefined,
         userAgent: request.headers.get("user-agent") || undefined,
         details: { reason: !user ? "user_not_found" : "invalid_password" },
       })
@@ -80,7 +88,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       userEmail: user.email,
       userRole: user.role,
-      ipAddress: request.ip || request.headers.get("x-forwarded-for") || undefined,
+      ipAddress: request.headers.get("x-forwarded-for") || undefined,
       userAgent: request.headers.get("user-agent") || undefined,
     })
 
@@ -99,7 +107,7 @@ export async function POST(request: NextRequest) {
     // Log error
     await logAuditEvent({
       eventType: "auth:login:error",
-      ipAddress: request.ip || request.headers.get("x-forwarded-for") || undefined,
+      ipAddress: request.headers.get("x-forwarded-for") || undefined,
       userAgent: request.headers.get("user-agent") || undefined,
       details: { error: error instanceof Error ? error.message : "Unknown error" },
     })

@@ -67,14 +67,7 @@
   }
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
+
 
 /* Custom utility classes for the new color scheme */
 .bg-navy {
