@@ -47,7 +47,16 @@ export async function POST(request: NextRequest) {
       name: string;
     }
 
-    const user: User | undefined = USERS.find((u: User) => u.email === email);
+    // const user: User | undefined = USERS.find((u: User) => u.email === email);
+    const response = await fetch("http://localhost:3001/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    })
+    const user = await response.json()
+  
 
     // Log login attempt
     await logAuditEvent({
@@ -80,7 +89,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Set HTTP-only cookie
-    setAuthCookie(session)
+    await setAuthCookie(session)
 
     // Log successful login
     await logAuditEvent({

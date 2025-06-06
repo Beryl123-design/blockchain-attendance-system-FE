@@ -90,12 +90,18 @@ export default function AdminDashboard() {
   const [showAlert, setShowAlert] = useState(false)
   const [settingsChanged, setSettingsChanged] = useState(false)
   const [settings, setSettings] = useState<AdminSettings>(defaultSettings)
-  const userRole = localStorage.getItem("userRole") // Example, replace with your actual auth logic
+  // const userRole = localStorage.getItem("userRole") // Example, replace with your actual auth logic
   const userDepartment = "Example Department" // Example, replace with your actual auth logic
   const [presentCount, setPresentCount] = useState(0)
   const [recentActivities, setRecentActivities] = useState<any[]>([])
-  const userEmail = localStorage.getItem("userEmail") || ""
-  const userName = localStorage.getItem("userName") || ""
+  const [userRole, setUserRole] = useState<string | null>(null)
+const [userEmail, setUserEmail] = useState("")
+const [userName, setUserName] = useState("")
+
+const [permissionsLoaded, setPermissionsLoaded] = useState(false);
+const [userPermissions, setUserPermissions] = useState<string[]>([]);
+
+const [userCount, setUserCount] = useState<number>(0)
   const userInitials =
     userName
       .split(" ")
@@ -122,10 +128,44 @@ export default function AdminDashboard() {
 
   // Load settings from localStorage on component mount
   useEffect(() => {
+    if (typeof window !== "undefined") {
+    const role = localStorage.getItem("userRole")
+    const email = localStorage.getItem("userEmail") || ""
+    const name = localStorage.getItem("userName") || ""
+
+    const users = JSON.parse(localStorage.getItem("users") || "[]")
+    setUserCount(users.length)
+
+    setUserRole(role)
+    setUserEmail(email)
+    setUserName(name)
+  }
+  setUserPermissions([
+    Permission.MANAGE_USERS,
+      Permission.VIEW_ALL_ATTENDANCE,
+      Permission.APPROVE_DEPARTMENT_LEAVE,
+      Permission.REPORT_ISSUE,
+      Permission.MANAGE_BULLETINS,
+      Permission.MANAGE_SETTINGS,
+      Permission.MANAGE_BLOCKCHAIN,
+  ])
+
+  const loadPermissions = async () => {
+    // Simulate async permission loading (e.g., from localStorage, context, or API)
+    await new Promise(resolve => setTimeout(resolve, 500)); // simulate delay
+
+    // After permission logic here, you can check and set permissions
+    // For example: const userPermissions = getUserPermissions();
+
+    setPermissionsLoaded(true);
+  };
+
+  loadPermissions();
     const savedSettings = localStorage.getItem("adminSettings")
     if (savedSettings) {
       setSettings(JSON.parse(savedSettings))
     }
+
 
     // Initial load of attendance data
     refreshAttendanceData()
@@ -630,6 +670,11 @@ export default function AdminDashboard() {
                   </TabsList>
 
                   {/* Overview Tab Content */}
+                  <div className="grid gap-4">
+                    {!permissionsLoaded ? (
+                      <div className="text-center py-8">Loading dashboard...</div>
+                    ) : (
+                    
                   <TabsContent value="overview" className="space-y-4">
                     {/* Summary Cards - Aligned in a consistent grid */}
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -642,7 +687,8 @@ export default function AdminDashboard() {
                         </CardHeader>
                         <CardContent>
                           <div className="text-2xl font-bold text-navy">
-                            {JSON.parse(localStorage.getItem("users") || "[]").length}
+                            {/* {JSON.parse(localStorage.getItem("users") || "[]").length} */}
+                            {userCount}
                           </div>
                         </CardContent>
                       </Card>
@@ -677,7 +723,8 @@ export default function AdminDashboard() {
                         </CardHeader>
                         <CardContent>
                           <div className="text-2xl font-bold text-navy">
-                            {JSON.parse(localStorage.getItem("users") || "[]").length - presentCount - 2}
+                            {/* {JSON.parse(localStorage.getItem("users") || "[]").length - presentCount - 2} */}
+                            {userCount - presentCount - 2}
                           </div>
                         </CardContent>
                       </Card>
@@ -814,6 +861,8 @@ export default function AdminDashboard() {
                       </Card>
                     )}
                   </TabsContent>
+                    )}
+                  </div>
 
                   {/* My Attendance Tab Content */}
                   <TabsContent value="attendance" className="space-y-4">

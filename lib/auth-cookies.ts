@@ -15,7 +15,7 @@ type AuthData = {
   expiresAt: number
 }
 
-export function setAuthCookie(authData: AuthData, rememberMe = false): void {
+export async function setAuthCookie(authData: AuthData, rememberMe = false): Promise<void> {
   const cookieOptions: Partial<ResponseCookie> = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -23,12 +23,13 @@ export function setAuthCookie(authData: AuthData, rememberMe = false): void {
     maxAge: rememberMe ? EXTENDED_SESSION_EXPIRY : DEFAULT_SESSION_EXPIRY,
     path: "/",
   }
-
-  cookies().set(AUTH_COOKIE_NAME, JSON.stringify(authData), cookieOptions)
+  const cookieStore = await cookies()
+  cookieStore.set(AUTH_COOKIE_NAME, JSON.stringify(authData), cookieOptions)
 }
 
-export function getAuthCookie(): AuthData | null {
-  const cookie = cookies().get(AUTH_COOKIE_NAME)
+export async function getAuthCookie(): Promise<AuthData | null> {
+  const cookieStore = await cookies()
+  const cookie = cookieStore.get(AUTH_COOKIE_NAME)
 
   if (!cookie) {
     return null
@@ -49,8 +50,9 @@ export function getAuthCookie(): AuthData | null {
   }
 }
 
-export function removeAuthCookie(): void {
-  cookies().delete(AUTH_COOKIE_NAME)
+export async function removeAuthCookie(): Promise<void> {
+  const cookieStore = await cookies()
+  cookieStore.delete(AUTH_COOKIE_NAME)
 }
 
 export function refreshAuthCookie(authData: AuthData, rememberMe = false): void {

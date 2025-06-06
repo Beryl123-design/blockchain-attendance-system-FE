@@ -49,10 +49,10 @@ export default function SignInForm() {
     const userRole = localStorage.getItem("userRole")
     const userEmail = localStorage.getItem("userEmail")
 
-    if (userRole && userEmail) {
-      // User is already logged in, redirect to dashboard
-      window.location.href = "/dashboard"
-    }
+    // if (userRole && userEmail) {
+    //   // User is already logged in, redirect to dashboard
+    //   window.location.href = "/dashboard"
+    // }
   }, [])
 
   const validateLoginForm = () => {

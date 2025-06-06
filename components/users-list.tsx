@@ -129,6 +129,7 @@ export function UsersList() {
 
   // Load users from localStorage on component mount
   useEffect(() => {
+    // fetch("http://localhost:3001")
     const storedUsers = localStorage.getItem("users")
     if (storedUsers) {
       // Combine initial users with stored users, avoiding duplicates by email
