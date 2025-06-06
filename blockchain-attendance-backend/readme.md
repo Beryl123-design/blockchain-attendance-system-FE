@@ -15,8 +15,19 @@ The DATABASE_URL should be;
     
     DATABASE_URL="postgres://postgres:postgres@localhost:5432/empattnd"
 
+
+NB; You can mannually create an admin user in your employee_attendance database To be able to test your login service in the backend;
+
 ## Run the Backend-Server
  In the blockchain-attendance-backend directory, 
+
+## Initaite Prisma Client
+Run the following command
+```bash
+npx prisma generate      # Generates the client
+npx prisma validate      # Optional: validates your schema
+npx prisma migrate dev   # Optional: if you have migrations to run
+```
 
  Run the following commands to start the server;
  
