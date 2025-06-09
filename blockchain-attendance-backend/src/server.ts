@@ -6,6 +6,8 @@ import cors from 'cors';
 import { Request, Response } from "express";
 import { log } from "console";
 
+
+import blockchainRoutes from './mockroute';
 dotenv.config();
 
 const prisma = new PrismaClient();
@@ -30,12 +32,15 @@ app.get("/", async (req, res) => {
   console.log("getting homepage")
   res.json({"hello": "world"})
 })
+
 app.post("/register", async (req, res) => {
   console.log("registration endpoint")
-  const { email, password, role, ethereumAddress } = req.body;
+  const { name, email, password, role, department, jobTitle } = req.body;
+
+  console.log(req.body)
   try {
     const user = await prisma.user.create({
-      data: { email, password, role, ethereumAddress },
+      data: { name, email, password, role, department, jobTitle},
     });
     res.json(user);
   } catch (error) {
@@ -64,6 +69,11 @@ app.post("/login", async (req, res) => {
   }
 });
 
+
+
+
+
+
 app.post("/attendance", async (req, res) => {
   const { userId, date, status } = req.body;
   const attendance = await prisma.attendance.create({
@@ -80,11 +90,22 @@ app.post("/attendance", async (req, res) => {
   res.json(attendance);
 });
 
+app.get("/attendance", async (req, res) => {
+  // const { userId, date, status } = req.body;
+  const attendance = await prisma.attendance.findMany();
+  res.json(attendance);
+});
+
 app.get("/attendance/:userId", async (req, res) => {
   const { userId } = req.params;
   const attendance = await prisma.attendance.findMany({ where: { userId: Number(userId) } });
   res.json(attendance);
 });
+
+app.get("/users", async (req, res) => {
+  const users = await prisma.user.findMany();
+  res.json(users);
+})
 
 app.post("/payroll", async (req, res) => {
   const { userId, amount, date } = req.body;
@@ -182,6 +203,7 @@ app.post("/attendance/track", async (req, res) => {
 
     // Record on blockchain using Alchemy Web3
     const accounts = await web3.eth.getAccounts();
+
     const tx = await contract.methods.markAttendance(status, location)
       .send({ 
         from: accounts[0],
@@ -199,7 +221,7 @@ app.post("/attendance/track", async (req, res) => {
 });
 
 // Add endpoint to verify attendance on blockchain
-// app.get("/attendance/verify/:userId/:date", async (req: Request, res: Response) => {
+// app.get("/attendance/verify/:userId/:date", async (req, res) => {
 //   const { userId, date } = req.params;
 //   try {
 //     // Get attendance from database
@@ -232,6 +254,8 @@ app.post("/attendance/track", async (req, res) => {
 //     res.status(400).json({ error: 'Failed to verify attendance' });
 //   }
 // });
+// app.use('/api/blockchain', blockchainRoutes);
+
 
 const tryPort = (port: number): Promise<number> => {
   return new Promise((resolve, reject) => {

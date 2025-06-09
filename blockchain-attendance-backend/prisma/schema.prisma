@@ -9,10 +9,14 @@ datasource db {
 
 model User {
   id              Int            @id @default(autoincrement())
+  name            String?
   email           String         @unique
   password        String
+  department      String         @default("admin")
   role            String
-  ethereumAddress String         @unique
+  jobTitle        String?
+  status          String         @default("inactive")    //inactve //active
+  ethereumAddress String?
   attendance      Attendance[]
   leaveRequests   LeaveRequest[]
   payroll         Payroll[]

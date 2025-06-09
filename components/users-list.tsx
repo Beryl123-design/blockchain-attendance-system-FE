@@ -39,9 +39,9 @@ const initialUsers = [
     name: "John Doe",
     email: "john.doe@example.com",
     department: "Engineering",
-    jobTitle: "Software Developer",
+    // jobTitle: "Software Developer",
     role: "employee",
-    status: "Active",
+    status: "active",
     dateAdded: "2024-01-15",
   },
   {
@@ -49,9 +49,9 @@ const initialUsers = [
     name: "Jane Smith",
     email: "jane.smith@example.com",
     department: "Marketing",
-    jobTitle: "Marketing Specialist",
+    // jobTitle: "Marketing Specialist",
     role: "employee",
-    status: "Active",
+    status: "active",
     dateAdded: "2024-01-20",
   },
   {
@@ -59,9 +59,9 @@ const initialUsers = [
     name: "Robert Johnson",
     email: "robert.johnson@example.com",
     department: "HR",
-    jobTitle: "HR Manager",
+    // jobTitle: "HR Manager",
     role: "admin",
-    status: "Active",
+    status: "active",
     dateAdded: "2024-02-01",
   },
   {
@@ -69,9 +69,9 @@ const initialUsers = [
     name: "Emily Davis",
     email: "emily.davis@example.com",
     department: "Finance",
-    jobTitle: "Accountant",
+    // jobTitle: "Accountant",
     role: "employee",
-    status: "Inactive",
+    status: "inactive",
     dateAdded: "2024-02-10",
   },
   {
@@ -79,9 +79,9 @@ const initialUsers = [
     name: "Michael Wilson",
     email: "michael.wilson@example.com",
     department: "Engineering",
-    jobTitle: "QA Engineer",
+    // jobTitle: "QA Engineer",
     role: "employee",
-    status: "Active",
+    status: "active",
     dateAdded: "2024-02-15",
   },
 ] as User[]
@@ -129,24 +129,25 @@ export function UsersList() {
 
   // Load users from localStorage on component mount
   useEffect(() => {
-    // fetch("http://localhost:3001")
-    const storedUsers = localStorage.getItem("users")
-    if (storedUsers) {
-      // Combine initial users with stored users, avoiding duplicates by email
-      const parsedUsers = JSON.parse(storedUsers) as User[]
-      const combinedUsers = [...initialUsers]
 
-      parsedUsers.forEach((newUser) => {
-        if (!combinedUsers.some((existingUser) => existingUser.email === newUser.email)) {
-          combinedUsers.push(newUser)
-        }
-      })
 
-      setUsers(combinedUsers)
-    } else {
-      // If no stored users, initialize localStorage with initial users
-      localStorage.setItem("users", JSON.stringify(initialUsers))
+    const fetchUsers = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/users");
+      const storedUsers = await response.json(); // assuming JSON response
+
+      if (storedUsers) {
+        const parsedUsers = storedUsers as User[];
+        
+
+        setUsers(parsedUsers);
+      } 
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
     }
+  };
+
+  fetchUsers();
   }, [])
 
   // Handle sorting
@@ -177,10 +178,10 @@ export function UsersList() {
   // Filter users based on search term
   const filteredUsers = sortedUsers.filter(
     (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()),
+      user.role.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   // Handle user deletion
@@ -301,9 +302,9 @@ export function UsersList() {
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>{user.department}</TableCell>
-                  <TableCell>{user.jobTitle}</TableCell>
+                  <TableCell>{user.role}</TableCell>
                   <TableCell>
-                    <Badge variant={user.status === "Active" ? "default" : "secondary"}>{user.status}</Badge>
+                    <Badge variant={user.status === "active" ? "default" : "secondary"}>{user.status}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
@@ -426,8 +427,8 @@ export function UsersList() {
                 </Label>
                 <Input
                   id="jobTitle"
-                  value={userToEdit.jobTitle}
-                  onChange={(e) => handleEditChange("jobTitle", e.target.value)}
+                  value={userToEdit.role}
+                  onChange={(e) => handleEditChange("role", e.target.value)}
                   className="col-span-3"
                 />
               </div>
