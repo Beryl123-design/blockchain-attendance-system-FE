@@ -70,18 +70,49 @@ app.post("/login", async (req, res) => {
 });
 
 
+app.get("/attendance/:userId/:date?", async (req, res) => {
+  try {
+    const { userId, date } = req.params;
 
+    const whereClause: any = {
+      userId: Number(userId),
+    };
+
+    if (date) {
+      const parsedDate = new Date(date);
+      const startOfDay = new Date(parsedDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(parsedDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+
+      whereClause.date = {
+        gte: startOfDay,
+        lte: endOfDay,
+      };
+    }
+
+    const attendance = await prisma.attendance.findMany({
+      where: whereClause,
+    });
+
+    res.json(attendance);
+  } catch (error) {
+    console.error("Error fetching attendance:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 
 
 app.post("/attendance", async (req, res) => {
-  const { userId, date, status } = req.body;
+  const { userId, date, status, checkIn } = req.body;
   const attendance = await prisma.attendance.create({
     // data: { userId, date: new Date(date), status },
     data: {
   date: new Date(date),
   status,
-  checkIn: new Date(), // Add this if required in your schema
+  checkIn: checkIn, // Add this if required in your schema
   user: {
     connect: { id: userId }
   }
@@ -96,11 +127,64 @@ app.get("/attendance", async (req, res) => {
   res.json(attendance);
 });
 
-app.get("/attendance/:userId", async (req, res) => {
-  const { userId } = req.params;
-  const attendance = await prisma.attendance.findMany({ where: { userId: Number(userId) } });
-  res.json(attendance);
+// app.get("/attendance/:userId/:date", async (req, res) => {
+//   const { userId,  } = req.params;
+//   if (req.params.date){
+//     const { date } = req.params
+//   }
+//   const attendance = await prisma.attendance.findMany({ where: { userId: Number(userId), date: Date(date) } });
+//   res.json(attendance);
+// });
+
+
+
+app.patch("/attendance/:id/checkout", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { checkOut, totalBreakTime, overtime, status } = req.body;
+    const updatedAttendance = await prisma.attendance.update({
+      where: {
+        id: Number(id),
+      },
+      data: {
+        checkOut: new Date(checkOut), // use the time from the frontend
+        totalBreakTime,
+        overtime,
+        status,
+      },
+    });
+
+    res.json(updatedAttendance);
+  } catch (error) {
+    console.error("Error updating attendance:", error);
+    res.status(500).json({ error: "Failed to update attendance" });
+  }
 });
+
+
+app.patch("/attendance/:id/overtime", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const updatedAttendance = await prisma.attendance.update({
+      where: {
+        id: Number(id),
+      },
+      data: {
+        checkOut: new Date(),
+        status: "out",
+      },
+    });
+
+    res.json(updatedAttendance);
+  } catch (error) {
+    console.error("Error updating attendance:", error);
+    res.status(500).json({ error: "Failed to update attendance" });
+  }
+});
+
+
+
 
 app.get("/users", async (req, res) => {
   const users = await prisma.user.findMany();

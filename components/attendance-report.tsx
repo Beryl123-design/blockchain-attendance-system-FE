@@ -13,6 +13,8 @@ import { format } from "date-fns"
 import { toast } from "@/components/ui/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 
+import { redirect } from "next/navigation"
+
 // Mock data for attendance report
 const initialAttendanceData = [
   {
@@ -65,7 +67,27 @@ export function AttendanceReport() {
   // In a real app, this would fetch from an API or blockchain
   useEffect(() => {
     // Check if there's any attendance data in localStorage
-    const storedRecords = JSON.parse(localStorage.getItem("attendanceHistory") || "[]")
+    // const storedRecords = JSON.parse(localStorage.getItem("attendanceHistory") || "[]")
+
+    (async () => {
+        const storedUser = localStorage.getItem("user")
+        console.log(storedUser);
+        
+        const user = storedUser ? JSON.parse(storedUser) : ""
+        console.log(user);
+        
+        if (!user?.id) {
+          console.log("User not found")
+          redirect("/")
+          return
+        }
+    
+        const response = await fetch("http://localhost:3001/attendance")
+
+        const storedRecords = await response.json()
+        console.log(storedRecords)
+        // setAttendanceRecords(storedRecords)
+      
 
     if (storedRecords.length > 0) {
       // Format the stored records to match our attendance data structure
@@ -89,7 +111,8 @@ export function AttendanceReport() {
 
       // Combine with our initial data
       setAttendanceData([...initialAttendanceData, ...formattedRecords])
-    }
+    }}
+  )()
   }, [])
 
   const filteredData = attendanceData.filter((record) => {

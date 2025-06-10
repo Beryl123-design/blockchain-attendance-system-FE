@@ -301,6 +301,7 @@ export async function getAttendanceRecords(userId?: string, date?: string) {
 
     const response = await fetch(url, {
       credentials: "include",
+
     })
 
     if (!response.ok) {
@@ -351,6 +352,45 @@ export async function recordAttendance(attendanceData: any) {
   }
 }
 
+export async function checkoutAttendance(checkOutData: any) {
+  const response = await fetch(`${API_BASE_URL}/attendance/${checkOutData.id}/checkout`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      checkOut: checkOutData.checkout,
+      totalBreakTime: checkOutData.totalBreakTime,
+      overtime: checkOutData.overtime,
+      status: checkOutData.status,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to update attendance record")
+  }
+
+  return response.json()
+}
+
+
+export async function recordOvertime(OvertimeData: any) {
+  const response = await fetch(`${API_BASE_URL}/attendance/${OvertimeData.id}/overtime`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      overtime: OvertimeData.overtime
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to update attendance record")
+  }
+
+  return response.json()
+}
 // The rest of the API client functions would follow the same pattern
 // with mock implementations
 

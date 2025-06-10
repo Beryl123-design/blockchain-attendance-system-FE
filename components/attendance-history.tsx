@@ -33,6 +33,7 @@ export function AttendanceHistory() {
 
   useEffect(() => {
     // Load attendance records from localStorage
+    
     (async () => {
     const storedUser = localStorage.getItem("user")
     console.log(storedUser);
@@ -85,6 +86,8 @@ export function AttendanceHistory() {
     switch (record.status) {
       case "in":
         return <Badge className="bg-blue-100 text-blue-800">Checked In</Badge>
+      case "out":
+        return <Badge className="bg-blue-100 text-blue-800">Complete</Badge>
       case "break":
         return <Badge className="bg-yellow-100 text-yellow-800">On Break</Badge>
       case "overtime":
