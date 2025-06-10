@@ -7,20 +7,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {getAttendanceRecords} from "@/lib/api-client"
+// import { redirect } from "next/dist/server/api-utils"
 
+import { redirect } from "next/navigation"
+import { log } from "console"
 interface AttendanceRecord {
   id: string
-  employeeId: string
-  employeeName: string
+  userId: string
   date: string
   checkIn: string
   checkOut: string | null
-  currentStatus?: "in" | "out" | "break" | "overtime"
+  status?: "in" | "out" | "break" | "overtime"
   totalBreakTime: number
+  totalWorkTime: number
   overtime: number
-  status: "In Progress" | "Completed"
-  breakStartTime?: string | null
-  overtimeStartTime?: string | null
+  blockchainHash: string
+  location: string
+  verified: boolean
 }
 
 export function AttendanceHistory() {
@@ -29,8 +33,22 @@ export function AttendanceHistory() {
 
   useEffect(() => {
     // Load attendance records from localStorage
-    const storedRecords = JSON.parse(localStorage.getItem("attendanceHistory") || "[]")
+    (async () => {
+    const storedUser = localStorage.getItem("user")
+    console.log(storedUser);
+    
+    const user = storedUser ? JSON.parse(storedUser) : ""
+    console.log(user);
+    
+    if (!user?.id) {
+      console.log("User not found")
+      redirect("/")
+      return
+    }
+
+    const storedRecords = await getAttendanceRecords(user.id)
     setAttendanceRecords(storedRecords)
+  })()
 
     // Set up an interval to refresh the data every 30 seconds
     const intervalId = setInterval(() => {
@@ -59,12 +77,12 @@ export function AttendanceHistory() {
 
   const getStatusBadge = (record: AttendanceRecord) => {
     // For completed records
-    if (record.status === "Completed") {
-      return <Badge className="bg-green-100 text-green-800">Completed</Badge>
-    }
+    // if (record.status === "Completed") {
+    //   return <Badge className="bg-green-100 text-green-800">Completed</Badge>
+    // }
 
     // For in-progress records
-    switch (record.currentStatus) {
+    switch (record.status) {
       case "in":
         return <Badge className="bg-blue-100 text-blue-800">Checked In</Badge>
       case "break":
@@ -77,11 +95,11 @@ export function AttendanceHistory() {
   }
 
   const getStatusIcon = (record: AttendanceRecord) => {
-    if (record.status === "Completed") {
-      return <Clock className="mr-2 h-4 w-4 text-green-600" />
-    }
+    // if (record.status === "Completed") {
+    //   return <Clock className="mr-2 h-4 w-4 text-green-600" />
+    // }
 
-    switch (record.currentStatus) {
+    switch (record.status) {
       case "in":
         return <Clock className="mr-2 h-4 w-4 text-blue-600" />
       case "break":
@@ -123,7 +141,7 @@ export function AttendanceHistory() {
             <CardTitle className="text-navy">My Attendance</CardTitle>
             <CardDescription>Track your attendance history</CardDescription>
           </div>
-          <Select value={filter} onValueChange={setFilter} className="mt-2 sm:mt-0 sm:w-[150px]">
+          <Select value={filter} onValueChange={setFilter} /*className="mt-2 sm:mt-0 sm:w-[150px]"*/>
             <SelectTrigger>
               <SelectValue placeholder="Filter" />
             </SelectTrigger>
