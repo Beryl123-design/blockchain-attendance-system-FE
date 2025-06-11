@@ -227,10 +227,11 @@ export function TimeTracking({ employeeRole }: TimeTrackingProps) {
 };
 
   const handleCheckOut = async () => {
-    if (!currentRecordId) return
+    if (!user) return
 
     try {
       const now = new Date()
+      const parseUser = JSON.parse(user)
 
       // Calculate overtime if applicable
       let overtimeDuration = 0
@@ -240,7 +241,7 @@ export function TimeTracking({ employeeRole }: TimeTrackingProps) {
 
       // Update attendance record in the backend
       await checkoutAttendance({
-        id: currentRecordId,
+        id: parseUser.id,
         checkOut: now.toISOString(),
         totalBreakTime,
         overtime: overtimeDuration,

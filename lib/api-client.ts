@@ -359,7 +359,7 @@ export async function checkoutAttendance(checkOutData: any) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      checkOut: checkOutData.checkout,
+      checkOut: checkOutData.checkOut,
       totalBreakTime: checkOutData.totalBreakTime,
       overtime: checkOutData.overtime,
       status: checkOutData.status,
