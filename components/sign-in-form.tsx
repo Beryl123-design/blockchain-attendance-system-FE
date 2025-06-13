@@ -49,10 +49,10 @@ export default function SignInForm() {
     const userRole = localStorage.getItem("userRole")
     const userEmail = localStorage.getItem("userEmail")
 
-    if (userRole && userEmail) {
-      // User is already logged in, redirect to dashboard
-      window.location.href = "/dashboard"
-    }
+    // if (userRole && userEmail) {
+    //   // User is already logged in, redirect to dashboard
+    //   window.location.href = "/dashboard"
+    // }
   }, [])
 
   const validateLoginForm = () => {
@@ -137,6 +137,7 @@ export default function SignInForm() {
 
       // Store minimal non-sensitive user info in localStorage for UI purposes only
       // Critical auth data is now in HTTP-only cookies
+      localStorage.setItem("user", JSON.stringify(response.user))
       localStorage.setItem("userName", response.user.name)
       localStorage.setItem("userEmail", response.user.email)
 

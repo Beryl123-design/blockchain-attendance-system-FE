@@ -3,7 +3,11 @@ import { PrismaClient } from "@prisma/client";
 import Web3 from "web3";
 import dotenv from "dotenv";
 import cors from 'cors';
+import { Request, Response } from "express";
+import { log } from "console";
 
+
+import blockchainRoutes from './mockroute';
 dotenv.config();
 
 const prisma = new PrismaClient();
@@ -18,48 +22,187 @@ const CONTRACT_ABI = require('./contracts/AttendanceSystem.json').abi;
 const contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
 
 app.use(express.json());
-app.use(cors());
+app.use(cors(({
+  origin: "http://localhost:3000", // specific origin
+  credentials: true, // allow credentials (cookies, auth)
+})));
+
+
+app.get("/", async (req, res) => {
+  console.log("getting homepage")
+  res.json({"hello": "world"})
+})
 
 app.post("/register", async (req, res) => {
-  const { email, password, role, ethereumAddress } = req.body;
+  console.log("registration endpoint")
+  const { name, email, password, role, department, jobTitle } = req.body;
+
+  console.log(req.body)
   try {
     const user = await prisma.user.create({
-      data: { email, password, role, ethereumAddress },
+      data: { name, email, password, role, department, jobTitle},
     });
     res.json(user);
   } catch (error) {
-    res.status(400).json({ error: "User already exists" });
+    res.status(400).json({ error: error });
   }
 });
 
 app.post("/login", async (req, res) => {
+  console.log("login endpoint");
+  
   const { email, password } = req.body;
+  console.log(`logging in with ${email}`);
   const user = await prisma.user.findUnique({ where: { email } });
+  if (user) {
+    console.log(`user: ${user.email} - ${user.password}`);
+  } else {
+    console.log("User not found");
+  }
   if (user && user.password === password) {
+    console.log("got uo")
     res.json(user);
   } else {
+    console.log(res);
+    
     res.status(401).json({ error: "Invalid credentials" });
   }
 });
 
+
+app.get("/attendance/:userId/:date?", async (req, res) => {
+  try {
+    const { userId, date } = req.params;
+
+    const whereClause: any = {
+      userId: Number(userId),
+    };
+
+    if (date) {
+      const parsedDate = new Date(date);
+      const startOfDay = new Date(parsedDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(parsedDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+
+      whereClause.date = {
+        gte: startOfDay,
+        lte: endOfDay,
+      };
+    }
+
+    const attendance = await prisma.attendance.findMany({
+      where: whereClause,
+    });
+
+    res.json(attendance);
+  } catch (error) {
+    console.error("Error fetching attendance:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+
 app.post("/attendance", async (req, res) => {
-  const { userId, date, status } = req.body;
+  const { userId, date, status, checkIn } = req.body;
   const attendance = await prisma.attendance.create({
-    data: { userId, date: new Date(date), status },
+    // data: { userId, date: new Date(date), status },
+    data: {
+  date: new Date(date),
+  status,
+  checkIn: checkIn, // Add this if required in your schema
+  user: {
+    connect: { id: userId }
+  }
+}
   });
   res.json(attendance);
 });
 
-app.get("/attendance/:userId", async (req, res) => {
-  const { userId } = req.params;
-  const attendance = await prisma.attendance.findMany({ where: { userId: Number(userId) } });
+app.get("/attendance", async (req, res) => {
+  // const { userId, date, status } = req.body;
+  const attendance = await prisma.attendance.findMany();
   res.json(attendance);
 });
+
+// app.get("/attendance/:userId/:date", async (req, res) => {
+//   const { userId,  } = req.params;
+//   if (req.params.date){
+//     const { date } = req.params
+//   }
+//   const attendance = await prisma.attendance.findMany({ where: { userId: Number(userId), date: Date(date) } });
+//   res.json(attendance);
+// });
+
+
+
+app.patch("/attendance/:id/checkout", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { checkOut, totalBreakTime, overtime, status } = req.body;
+    const updatedAttendance = await prisma.attendance.update({
+      where: {
+        id: Number(id),
+      },
+      data: {
+        checkOut: new Date(checkOut), // use the time from the frontend
+        totalBreakTime,
+        overtime,
+        status,
+      },
+    });
+
+    res.json(updatedAttendance);
+  } catch (error) {
+    console.error("Error updating attendance:", error);
+    res.status(500).json({ error: "Failed to update attendance" });
+  }
+});
+
+
+app.patch("/attendance/:id/overtime", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const updatedAttendance = await prisma.attendance.update({
+      where: {
+        id: Number(id),
+      },
+      data: {
+        checkOut: new Date(),
+        status: "out",
+      },
+    });
+
+    res.json(updatedAttendance);
+  } catch (error) {
+    console.error("Error updating attendance:", error);
+    res.status(500).json({ error: "Failed to update attendance" });
+  }
+});
+
+
+
+
+app.get("/users", async (req, res) => {
+  const users = await prisma.user.findMany();
+  res.json(users);
+})
 
 app.post("/payroll", async (req, res) => {
   const { userId, amount, date } = req.body;
   const payroll = await prisma.payroll.create({
-    data: { userId, amount, date: new Date(date) },
+    // data: { userId, amount, date: new Date(date) },
+    data: {
+  amount,
+  date: new Date(date),
+  status: "pending", // Or whatever default you need
+  user: {
+    connect: { id: userId }
+  }
+}
   });
   res.json(payroll);
 });
@@ -125,16 +268,26 @@ app.post("/attendance/track", async (req, res) => {
   try {
     // Create attendance record in database
     const attendance = await prisma.attendance.create({
+      // data: {
+      //   userId,
+      //   date: new Date(),
+      //   status,
+      //   location
+      // },
       data: {
-        userId,
-        date: new Date(),
-        status,
-        location
-      },
+  date: new Date(),
+  status,
+  location,
+  checkIn: new Date(),
+  user: {
+    connect: { id: userId }
+  }
+}
     });
 
     // Record on blockchain using Alchemy Web3
     const accounts = await web3.eth.getAccounts();
+
     const tx = await contract.methods.markAttendance(status, location)
       .send({ 
         from: accounts[0],
@@ -152,39 +305,41 @@ app.post("/attendance/track", async (req, res) => {
 });
 
 // Add endpoint to verify attendance on blockchain
-app.get("/attendance/verify/:userId/:date", async (req, res) => {
-  const { userId, date } = req.params;
-  try {
-    // Get attendance from database
-    const attendance = await prisma.attendance.findFirst({
-      where: {
-        userId: Number(userId),
-        date: new Date(date),
-      },
-    });
+// app.get("/attendance/verify/:userId/:date", async (req, res) => {
+//   const { userId, date } = req.params;
+//   try {
+//     // Get attendance from database
+//     const attendance = await prisma.attendance.findFirst({
+//       where: {
+//         userId: Number(userId),
+//         date: new Date(date),
+//       },
+//     });
 
-    if (!attendance) {
-      return res.status(404).json({ error: 'Attendance record not found' });
-    }
+//     if (!attendance) {
+//       return res.status(404).json({ error: 'Attendance record not found' });
+//     }
 
-    // Verify on blockchain
-    const blockchainRecord: { status: string } = await contract.methods
-      .getAttendanceRecord(
-        attendance.userId,
-        Math.floor(new Date(date).getTime() / 1000)
-      )
-      .call();
+//     // Verify on blockchain
+//     const blockchainRecord: { status: string } = await contract.methods
+//       .getAttendanceRecord(
+//         attendance.userId,
+//         Math.floor(new Date(date).getTime() / 1000)
+//       )
+//       .call();
 
-    res.json({
-      databaseRecord: attendance,
-      blockchainRecord,
-      verified: attendance.status === blockchainRecord.status,
-    });
-  } catch (error) {
-    console.error('Attendance verification error:', error);
-    res.status(400).json({ error: 'Failed to verify attendance' });
-  }
-});
+//     res.json({
+//       databaseRecord: attendance,
+//       blockchainRecord,
+//       verified: attendance.status === blockchainRecord.status,
+//     });
+//   } catch (error) {
+//     console.error('Attendance verification error:', error);
+//     res.status(400).json({ error: 'Failed to verify attendance' });
+//   }
+// });
+// app.use('/api/blockchain', blockchainRoutes);
+
 
 const tryPort = (port: number): Promise<number> => {
   return new Promise((resolve, reject) => {
@@ -204,7 +359,7 @@ const tryPort = (port: number): Promise<number> => {
 
 tryPort(Number(process.env.PORT) || 3000)
   .then(port => {
-    console.log(`Server is running on port ${port}`);
+    console.log(`Server is running on wport ${port}`);
   })
   .catch(err => {
     console.error('Failed to start server:', err);

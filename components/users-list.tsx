@@ -39,9 +39,9 @@ const initialUsers = [
     name: "John Doe",
     email: "john.doe@example.com",
     department: "Engineering",
-    jobTitle: "Software Developer",
+    // jobTitle: "Software Developer",
     role: "employee",
-    status: "Active",
+    status: "active",
     dateAdded: "2024-01-15",
   },
   {
@@ -49,9 +49,9 @@ const initialUsers = [
     name: "Jane Smith",
     email: "jane.smith@example.com",
     department: "Marketing",
-    jobTitle: "Marketing Specialist",
+    // jobTitle: "Marketing Specialist",
     role: "employee",
-    status: "Active",
+    status: "active",
     dateAdded: "2024-01-20",
   },
   {
@@ -59,9 +59,9 @@ const initialUsers = [
     name: "Robert Johnson",
     email: "robert.johnson@example.com",
     department: "HR",
-    jobTitle: "HR Manager",
+    // jobTitle: "HR Manager",
     role: "admin",
-    status: "Active",
+    status: "active",
     dateAdded: "2024-02-01",
   },
   {
@@ -69,9 +69,9 @@ const initialUsers = [
     name: "Emily Davis",
     email: "emily.davis@example.com",
     department: "Finance",
-    jobTitle: "Accountant",
+    // jobTitle: "Accountant",
     role: "employee",
-    status: "Inactive",
+    status: "inactive",
     dateAdded: "2024-02-10",
   },
   {
@@ -79,9 +79,9 @@ const initialUsers = [
     name: "Michael Wilson",
     email: "michael.wilson@example.com",
     department: "Engineering",
-    jobTitle: "QA Engineer",
+    // jobTitle: "QA Engineer",
     role: "employee",
-    status: "Active",
+    status: "active",
     dateAdded: "2024-02-15",
   },
 ] as User[]
@@ -129,23 +129,25 @@ export function UsersList() {
 
   // Load users from localStorage on component mount
   useEffect(() => {
-    const storedUsers = localStorage.getItem("users")
-    if (storedUsers) {
-      // Combine initial users with stored users, avoiding duplicates by email
-      const parsedUsers = JSON.parse(storedUsers) as User[]
-      const combinedUsers = [...initialUsers]
 
-      parsedUsers.forEach((newUser) => {
-        if (!combinedUsers.some((existingUser) => existingUser.email === newUser.email)) {
-          combinedUsers.push(newUser)
-        }
-      })
 
-      setUsers(combinedUsers)
-    } else {
-      // If no stored users, initialize localStorage with initial users
-      localStorage.setItem("users", JSON.stringify(initialUsers))
+    const fetchUsers = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/users");
+      const storedUsers = await response.json(); // assuming JSON response
+
+      if (storedUsers) {
+        const parsedUsers = storedUsers as User[];
+        
+
+        setUsers(parsedUsers);
+      } 
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
     }
+  };
+
+  fetchUsers();
   }, [])
 
   // Handle sorting
@@ -164,10 +166,10 @@ export function UsersList() {
     const aValue = a[sortConfig.key]
     const bValue = b[sortConfig.key]
 
-    if (aValue < bValue) {
+    if (aValue !== undefined && bValue !== undefined && aValue < bValue) {
       return sortConfig.direction === "ascending" ? -1 : 1
     }
-    if (aValue > bValue) {
+    if (aValue !== undefined && bValue !== undefined && aValue > bValue) {
       return sortConfig.direction === "ascending" ? 1 : -1
     }
     return 0
@@ -176,10 +178,10 @@ export function UsersList() {
   // Filter users based on search term
   const filteredUsers = sortedUsers.filter(
     (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()),
+      user.role.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   // Handle user deletion
@@ -267,8 +269,8 @@ export function UsersList() {
               <TableHead>
                 <div className="flex items-center">
                   Name
-                  <Button variant="ghost" size="sm" className="ml-1 h-8 p-0" onClick={() => requestSort("name")}>
-                    <ArrowUpDown className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="h-8 p-0 ml-1" onClick={() => requestSort("name")}>
+                    <ArrowUpDown className="w-4 h-4" />
                   </Button>
                 </div>
               </TableHead>
@@ -276,8 +278,8 @@ export function UsersList() {
               <TableHead>
                 <div className="flex items-center">
                   Department
-                  <Button variant="ghost" size="sm" className="ml-1 h-8 p-0" onClick={() => requestSort("department")}>
-                    <ArrowUpDown className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="h-8 p-0 ml-1" onClick={() => requestSort("department")}>
+                    <ArrowUpDown className="w-4 h-4" />
                   </Button>
                 </div>
               </TableHead>
@@ -285,8 +287,8 @@ export function UsersList() {
               <TableHead>
                 <div className="flex items-center">
                   Status
-                  <Button variant="ghost" size="sm" className="ml-1 h-8 p-0" onClick={() => requestSort("status")}>
-                    <ArrowUpDown className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="h-8 p-0 ml-1" onClick={() => requestSort("status")}>
+                    <ArrowUpDown className="w-4 h-4" />
                   </Button>
                 </div>
               </TableHead>
@@ -300,15 +302,15 @@ export function UsersList() {
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>{user.department}</TableCell>
-                  <TableCell>{user.jobTitle}</TableCell>
+                  <TableCell>{user.role}</TableCell>
                   <TableCell>
-                    <Badge variant={user.status === "Active" ? "default" : "secondary"}>{user.status}</Badge>
+                    <Badge variant={user.status === "active" ? "default" : "secondary"}>{user.status}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
+                          <MoreHorizontal className="w-4 h-4" />
                           <span className="sr-only">Open menu</span>
                         </Button>
                       </DropdownMenuTrigger>
@@ -319,7 +321,7 @@ export function UsersList() {
                             setIsEditDialogOpen(true)
                           }}
                         >
-                          <Pencil className="mr-2 h-4 w-4" />
+                          <Pencil className="w-4 h-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -329,7 +331,7 @@ export function UsersList() {
                             setIsDeleteDialogOpen(true)
                           }}
                         >
-                          <Trash className="mr-2 h-4 w-4" />
+                          <Trash className="w-4 h-4 mr-2" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -341,7 +343,7 @@ export function UsersList() {
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center">
                   <div className="flex flex-col items-center justify-center text-muted-foreground">
-                    <AlertCircle className="h-8 w-8 mb-2" />
+                    <AlertCircle className="w-8 h-8 mb-2" />
                     <p>No users found</p>
                     <p className="text-sm">Try adjusting your search terms</p>
                   </div>
@@ -380,7 +382,7 @@ export function UsersList() {
           </DialogHeader>
           {userToEdit && (
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid items-center grid-cols-4 gap-4">
                 <Label htmlFor="name" className="text-right">
                   Name
                 </Label>
@@ -391,7 +393,7 @@ export function UsersList() {
                   className="col-span-3"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid items-center grid-cols-4 gap-4">
                 <Label htmlFor="email" className="text-right">
                   Email
                 </Label>
@@ -402,7 +404,7 @@ export function UsersList() {
                   className="col-span-3"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid items-center grid-cols-4 gap-4">
                 <Label htmlFor="department" className="text-right">
                   Department
                 </Label>
@@ -419,18 +421,18 @@ export function UsersList() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid items-center grid-cols-4 gap-4">
                 <Label htmlFor="jobTitle" className="text-right">
                   Job Title
                 </Label>
                 <Input
                   id="jobTitle"
-                  value={userToEdit.jobTitle}
-                  onChange={(e) => handleEditChange("jobTitle", e.target.value)}
+                  value={userToEdit.role}
+                  onChange={(e) => handleEditChange("role", e.target.value)}
                   className="col-span-3"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid items-center grid-cols-4 gap-4">
                 <Label htmlFor="role" className="text-right">
                   Role
                 </Label>
@@ -447,7 +449,7 @@ export function UsersList() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
+              <div className="grid items-center grid-cols-4 gap-4">
                 <Label htmlFor="status" className="text-right">
                   Status
                 </Label>

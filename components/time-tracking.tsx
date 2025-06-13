@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/use-toast"
-import { getAttendanceRecords, recordAttendance } from "@/lib/api-client"
+import { getAttendanceRecords, recordAttendance, checkoutAttendance } from "@/lib/api-client"
 
 interface TimeTrackingProps {
   employeeRole: "executive" | "department_head" | "employee"
@@ -39,7 +39,7 @@ export function TimeTracking({ employeeRole }: TimeTrackingProps) {
   const userName = localStorage.getItem("userName") || ""
   const userDepartment = localStorage.getItem("userDepartment") || ""
   const userJobTitle = localStorage.getItem("userJobTitle") || ""
-  const userId = localStorage.getItem("userId") || ""
+  const user = localStorage.getItem("user") || ""
 
   // Grace period in minutes based on role
   const gracePeriodsInMinutes = {
@@ -56,6 +56,17 @@ export function TimeTracking({ employeeRole }: TimeTrackingProps) {
         const today = new Date().toISOString().split("T")[0]
 
         // Fetch attendance records for today
+        const storedUser = localStorage.getItem("user")
+        if (!storedUser) {
+        toast({
+          title: "User not found",
+          description: "Please login again.",
+          variant: "destructive",
+        })
+        return
+      }
+        const parsedUser = JSON.parse(storedUser)
+        const userId = parsedUser.id
         const response = await getAttendanceRecords(userId, today)
 
         if (response.records && response.records.length > 0) {
@@ -92,14 +103,14 @@ export function TimeTracking({ employeeRole }: TimeTrackingProps) {
       }
     }
 
-    if (userId) {
-      fetchAttendanceData()
-    }
-  }, [userId])
+    
+    fetchAttendanceData()
+  }, [])
 
   useEffect(() => {
     let timer: NodeJS.Timeout
 
+   
     if (status === "in" || status === "overtime") {
       timer = setInterval(() => {
         if (checkInTime) {
@@ -169,43 +180,58 @@ export function TimeTracking({ employeeRole }: TimeTrackingProps) {
   }
 
   const handleCheckIn = async () => {
-    try {
-      const now = new Date()
+  try {
+    const now = new Date();
 
-      // Create attendance record in the backend
-      const response = await recordAttendance({
-        userId,
-        date: now.toISOString().split("T")[0],
-        checkIn: now.toISOString(),
-        status: "in",
-      })
-
-      // Update local state
-      setStatus("in")
-      setCheckInTime(now)
-      setElapsedTime(0)
-      setTotalBreakTime(0)
-      setCurrentRecordId(response.record.id)
-
+    // Parse user info from localStorage
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) {
       toast({
-        title: "Checked In",
-        description: `You have successfully checked in at ${formatDateTime(now)}.`,
-      })
-    } catch (error) {
-      console.error("Check-in error:", error)
-      toast({
-        title: "Check-in Failed",
-        description: "Failed to record check-in. Please try again.",
+        title: "User not found",
+        description: "Please login again.",
         variant: "destructive",
-      })
+      });
+      return;
     }
+
+    const parsedUser = JSON.parse(storedUser);
+    const userId = Number(parsedUser.id); // Ensure it's a number for backend
+
+    // Create attendance record in the backend
+    const response = await recordAttendance({
+      userId,
+      date: now.toISOString().split("T")[0], // "YYYY-MM-DD"
+      checkIn: now.toISOString(),
+      status: "in",
+    });
+
+    // Update local state
+    setStatus("in");
+    setCheckInTime(now);
+    setElapsedTime(0);
+    setTotalBreakTime(0);
+    setCurrentRecordId(response.id); // assuming response contains { id }
+
+    toast({
+      title: "Checked In",
+      description: `You have successfully checked in at ${formatDateTime(now)}.`,
+    });
+  } catch (error) {
+    console.error("Check-in error:", error);
+    toast({
+      title: "Check-in Failed",
+      description: "Failed to record check-in. Please try again.",
+      variant: "destructive",
+    });
   }
+};
 
   const handleCheckOut = async () => {
-    if (!currentRecordId) return
+    if (!user) return
 
     try {
       const now = new Date()
+      const parseUser = JSON.parse(user)
 
       // Calculate overtime if applicable
       let overtimeDuration = 0
@@ -214,8 +240,8 @@ export function TimeTracking({ employeeRole }: TimeTrackingProps) {
       }
 
       // Update attendance record in the backend
-      await recordAttendance({
-        id: currentRecordId,
+      await checkoutAttendance({
+        id: parseUser.id,
         checkOut: now.toISOString(),
         totalBreakTime,
         overtime: overtimeDuration,
@@ -316,11 +342,11 @@ export function TimeTracking({ employeeRole }: TimeTrackingProps) {
       const now = new Date()
 
       // Update attendance record in the backend
-      await recordAttendance({
-        id: currentRecordId,
-        status: "overtime",
-        overtimeStartTime: now.toISOString(),
-      })
+      // await recordOvertime({
+      //   id: currentRecordId,
+      //   status: "overtime",
+      //   overtimeStartTime: now.toISOString(),
+      // })
 
       // Update local state
       setStatus("overtime")

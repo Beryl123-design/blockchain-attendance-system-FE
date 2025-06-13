@@ -4,8 +4,12 @@ import { AUTH_COOKIE_NAME } from "@/lib/auth-cookies"
 import DashboardWrapper from "@/components/dashboard-wrapper"
 
 export default async function DashboardPage() {
+
+  const enable_cookies=true
   // Server-side authentication check
+  if(enable_cookies){
   const authCookies = await cookies();
+  console.log(` Auth Cookies :${authCookies}`)
   const authCookie = authCookies.get(AUTH_COOKIE_NAME);
 
   if (!authCookie) {
@@ -13,20 +17,36 @@ export default async function DashboardPage() {
   }
 
   try {
+    
     const session = JSON.parse(authCookie.value)
+    console.log(session)
 
     if (!session || !session.userId || session.expiresAt < Date.now()) {
       redirect("/")
     }
+    
 
     // Determine which dashboard to show based on user role
     const userRole = session.role
     const userName = session.name
     const userEmail = session.email
 
-    return <DashboardWrapper userRole={userRole} userName={userName} userEmail={userEmail} />
+    return <DashboardWrapper 
+    userRole={userRole} 
+    userName={userName} 
+    userEmail={userEmail} />
+
+
+    
   } catch (error) {
     console.error("Error parsing auth cookie:", error)
     redirect("/")
   }
+}
+else {
+  return <DashboardWrapper 
+    userRole="admin" 
+    userName="Admin User"
+    userEmail="admin123" />
+}
 }

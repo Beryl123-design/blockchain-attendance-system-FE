@@ -1,12 +1,12 @@
 /**
  * API client for connecting to the backend
  */
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"
+"use client"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
 
 // Always use mock implementation in v0.dev
 // This ensures we don't try to make real API calls that will fail
-const USE_MOCK = true
+const USE_MOCK = false
 
 // Mock data for preview mode - MAKE SURE THESE MATCH THE DISPLAYED DEMO CREDENTIALS
 const MOCK_USERS = [
@@ -79,6 +79,7 @@ export async function login(email: string, password: string) {
         },
       }
     }
+    else{
 
     // First, get a CSRF token
     const csrfResponse = await fetch("/api/csrf")
@@ -99,6 +100,7 @@ export async function login(email: string, password: string) {
     }
 
     return await response.json()
+  }
   } catch (error) {
     console.error("Login error:", error)
     throw error
@@ -165,7 +167,7 @@ export async function registerUser(userData: {
       }
     }
 
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    const response = await fetch(`${API_BASE_URL}/register`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -176,7 +178,7 @@ export async function registerUser(userData: {
 
     if (!response.ok) {
       const error = await response.json()
-      throw new Error(error.message || "Registration failed")
+      throw new Error(error.error || "Registration failed")
     }
 
     return await response.json()
@@ -299,6 +301,7 @@ export async function getAttendanceRecords(userId?: string, date?: string) {
 
     const response = await fetch(url, {
       credentials: "include",
+
     })
 
     if (!response.ok) {
@@ -349,6 +352,45 @@ export async function recordAttendance(attendanceData: any) {
   }
 }
 
+export async function checkoutAttendance(checkOutData: any) {
+  const response = await fetch(`${API_BASE_URL}/attendance/${checkOutData.id}/checkout`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      checkOut: checkOutData.checkOut,
+      totalBreakTime: checkOutData.totalBreakTime,
+      overtime: checkOutData.overtime,
+      status: checkOutData.status,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to update attendance record")
+  }
+
+  return response.json()
+}
+
+
+export async function recordOvertime(OvertimeData: any) {
+  const response = await fetch(`${API_BASE_URL}/attendance/${OvertimeData.id}/overtime`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      overtime: OvertimeData.overtime
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to update attendance record")
+  }
+
+  return response.json()
+}
 // The rest of the API client functions would follow the same pattern
 // with mock implementations
 

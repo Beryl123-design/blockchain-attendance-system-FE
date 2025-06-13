@@ -15,7 +15,7 @@ export function withAuth(handler: (req: NextRequest) => Promise<NextResponse>, r
     try {
       const session = JSON.parse(authCookie.value)
 
-      if (!session || !session.userId || session.expiresAt < Date.now()) {
+      if (!session || !session.userId || session.expiresAt < Date.now() + 60000) { // check if session is expired ( 30 seconcs buffer)
         return NextResponse.json({ error: "Session expired" }, { status: 401 })
       }
 

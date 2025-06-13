@@ -19,7 +19,7 @@ export interface User {
   department: string
   role: string
   jobTitle: string
-  status: "Active" | "Inactive"
+  status: "active" | "inactive"
   dateAdded: string
   password?: string
 }
@@ -55,17 +55,17 @@ export function AddUserForm() {
     name: "",
     email: "",
     department: "",
+    role: "",
     jobTitle: "",
-    userType: "",
     password: "",
   })
 
-  const [userCount, setUserCount] = useState(0)
+  // const [userCount, setUserCount] = useState(0)
 
   // Load user count from localStorage on component mount
   useEffect(() => {
-    const existingUsers = JSON.parse(localStorage.getItem("users") || "[]")
-    setUserCount(existingUsers.length)
+    // const existingUsers = JSON.parse(localStorage.getItem("users") || "[]")
+    // setUserCount(existingUsers.length)
   }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,31 +77,40 @@ export function AddUserForm() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     // In a real app, we would send this data to the backend
-    console.log("Form submitted:", formData)
-
+    
     // Create new user object
     const newUser = {
-      id: Date.now().toString(),
       name: formData.name,
       email: formData.email,
       department: formData.department,
-      role: formData.userType,
+      role: formData.role,
       jobTitle: formData.jobTitle,
-      status: "Active",
-      dateAdded: new Date().toISOString().split("T")[0],
+      // dateAdded: new Date().toISOString().split("T")[0],
       password: formData.password, // In a real app, this would be hashed
     }
+    
+    console.log("Form submitted:", formData)
+    // // Get existing users from localStorage
+    // const existingUsers = JSON.parse(localStorage.getItem("users") || "[]")
 
-    // Get existing users from localStorage
-    const existingUsers = JSON.parse(localStorage.getItem("users") || "[]")
+    // // Check if user with this email already exists
+    // const userExists = existingUsers.some((user: User) => user.email === formData.email)
 
-    // Check if user with this email already exists
-    const userExists = existingUsers.some((user: User) => user.email === formData.email)
+    const response = await fetch("http://localhost:3001/register", {
+      method: "POST",
+      body: JSON.stringify(formData),
+      headers: {
+    "Content-Type": "application/json"
+  }
+    })
 
-    if (userExists) {
+    const res = await response.json()
+    console.log(res)
+
+    if (response.status != 200) {
       toast({
         title: "Error",
         description: `A user with email ${formData.email} already exists.`,
@@ -109,14 +118,14 @@ export function AddUserForm() {
       return
     }
 
-    // Add new user to the list
-    const updatedUsers = [...existingUsers, newUser]
+    // // Add new user to the list
+    // const updatedUsers = [...existingUsers, newUser]
 
-    // Save to localStorage
-    localStorage.setItem("users", JSON.stringify(updatedUsers))
+    // // Save to localStorage
+    // localStorage.setItem("users", JSON.stringify(updatedUsers))
 
-    // Update user count
-    setUserCount(updatedUsers.length)
+    // // Update user count
+    // setUserCount(updatedUsers.length)
 
     // Show success message
     toast({
@@ -130,7 +139,7 @@ export function AddUserForm() {
       email: "",
       department: "",
       role: "",
-      userType: "",
+      jobTitle: "",
       password: "",
     })
   }
@@ -139,7 +148,7 @@ export function AddUserForm() {
     <Card>
       <CardHeader>
         <CardTitle>Add New User</CardTitle>
-        <CardDescription>Add a new employee to the system. Total users: {userCount}</CardDescription>
+        {/* <CardDescription>Add a new employee to the system. Total users: {userCount}</CardDescription> */}
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
@@ -206,7 +215,7 @@ export function AddUserForm() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="user-type">User Role</Label>
-              <Select value={formData.userType} onValueChange={(value) => handleSelectChange("userType", value)}>
+              <Select value={formData.role} onValueChange={(value) => handleSelectChange("role", value)}>
                 <SelectTrigger id="user-type">
                   <SelectValue placeholder="Select user role" />
                 </SelectTrigger>
